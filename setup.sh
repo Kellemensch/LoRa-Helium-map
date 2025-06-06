@@ -80,6 +80,18 @@ else
     echo "SPLAT! is installed."
 fi
 
+# Installation de l'outil srtm2sdf
+echo "Installing gnuplot"
+sudo apt install gnuplot
+
+if ! command -v srtm2sdf &> /dev/null
+then
+    echo "Installing srtm2sdf util"
+    sudo /usr/src/splat-1.4.2/utils/install srtm2sdf
+else
+    echo "srtm2sdf util is installed."
+fi
+
 source venv/bin/activate
 
 echo "✅ Setup finished. Launch the project with:"
