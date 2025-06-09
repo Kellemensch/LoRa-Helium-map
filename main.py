@@ -12,10 +12,17 @@ def run_all():
     time.sleep(2)
     p2 = subprocess.Popen(["python3", "webhook_server.py"])
     subprocesses.append(p2)
+
+    run_map()
+    
+
+def run_map():
+    print("(Re)running SPLAT calculation and map generation on new data...")
     p3 = subprocess.Popen(["python3", "run_splat.py"])
     p3.wait()
     p4 = subprocess.Popen(["python3","generate_maps.py"])
     subprocesses.append(p4)
+
 
 def cleanup(signum=None, frame=None):
     print("Stopping all subprocesses...")
@@ -35,6 +42,10 @@ signal.signal(signal.SIGTERM, cleanup)  # kill ou shutdown
 
 try:
     run_all()
+
+    # Lance le calcul splat et la génération de map toutes les 5 minutes
+    schedule.every(5).minutes.do(run_map)
+
     while True:
         schedule.run_pending()
         time.sleep(1)
@@ -42,8 +53,3 @@ try:
 except KeyboardInterrupt:
     # Catch redondant au cas où le signal ne capte pas tout
     cleanup()
-
-
-# Lancer une fois ou régulièrement :
-# run_all()
-# schedule.every(1).hour.do(run_all)

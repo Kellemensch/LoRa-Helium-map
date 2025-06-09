@@ -21,7 +21,7 @@ CSV_FILE = "./data/helium_gateway_data.csv"
 # Definizione dell'header del CSV
 CSV_HEADER = ["gwTime", "gatewayId", "gateway_name", "gateway_id", 
               "node_long", "node_lat", "gateway_long", "gateway_lat", 
-              "dist_km", "rssi", "snr"]
+              "dist_km", "rssi", "snr", "visibility"]
 
 # ----------------------------------------------------------------------------
 # **POSIZIONE DEL NODO (Da impostare manualmente)**
@@ -97,7 +97,7 @@ def helium_webhook():
                 # Scrive una riga nel CSV
                 writer.writerow([gwTime, gatewayId, gateway_name, gateway_id, 
                                  NODE_LONG, NODE_LAT, gateway_long, gateway_lat, 
-                                 dist_km, rssi, snr])
+                                 dist_km, rssi, snr, "N/A"])
 
         return jsonify({"status": "success", "message": "Dati ricevuti e salvati in CSV"}), 200
 

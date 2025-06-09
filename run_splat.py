@@ -1,17 +1,16 @@
 import csv
 import os
 import subprocess
+from collections import defaultdict
 
 GATEWAY_CSV = "data/helium_gateway_data.csv"
 END_NODE_FILE = "data/terrain/galileo_end_node.qth"
-OUTPUT_CSV = "splat-runs/results/los_results.csv"
 QTH_DIR = "data/terrain"
 SDF_DIR = "maps"
 
 os.makedirs(QTH_DIR, exist_ok=True)
 os.makedirs("./data/results", exist_ok=True)
 os.makedirs("splat-runs/img", exist_ok=True)
-os.makedirs("splat-runs/results", exist_ok=True)
 
 
 def parse_end_node():
@@ -63,47 +62,58 @@ def is_nlos(splat_output):
         return False
 
 def main():
-    results = []
     with open(GATEWAY_CSV, newline="") as csvfile:
-        reader = csv.reader(csvfile)
-        next(reader)
-        for row in reader:
-            try:
-                gw_id = row[1]
-                gw_name = row[2]
-                gw_lat = float(row[7])
-                gw_lon = 360 - float(row[6]) # Pour bonne lecture de fichier SDL
-                gw_alt = 3  # approximatif
-                gw_distance = float(row[8])
+        reader = csv.DictReader(csvfile)
+        rows = list(reader)
+    
+    fieldnames = reader.fieldnames
 
-                gw_qth = f"{QTH_DIR}/{gw_name}.qth"
-                generate_qth(gw_name, gw_lat, gw_lon, gw_alt, gw_qth)
+    # Regrouper les lignes par nom de gateway
+    gateways = defaultdict(list)
+    for row in rows:
+        if row.get("visibility") == "N/A":
+            gateways[row["gateway_name"]].append(row)
 
-                print(f"Analysing {gw_name}...")
+    for gw_name, gw_rows in gateways.items():
+        try:
+            sample_row = gw_rows[0]
+            gw_lat = float(sample_row["gateway_lat"])
+            gw_lon = 360 - float(sample_row["gateway_long"])
+            gw_alt = 3
 
-                txt_path = f"Galileo-to-{gw_name}.txt"
+            gw_qth = f"{QTH_DIR}/{gw_name}.qth"
+            generate_qth(gw_name, gw_lat, gw_lon, gw_alt, gw_qth)
 
-                splat = run_splat(f"{QTH_DIR}/galileo_end_node.qth", gw_qth, f"{gw_name}.png", txt_path)
+            print(f"Analysing {gw_name}...")
 
-                if splat:
-                    if not os.path.exists(txt_path):
-                        print(f"Splat file missing : {txt_path}")
-                        continue
+            txt_path = f"Galileo-to-{gw_name}.txt"
+            png_path = f"{gw_name}.png"
 
-                    has_nlos = is_nlos(txt_path)
+            splat = run_splat(f"{QTH_DIR}/galileo_end_node.qth", gw_qth, png_path, txt_path)
 
-                    results.append([gw_id, gw_name, gw_lat, gw_lon, round(gw_distance, 2), "NLOS" if has_nlos else "LOS"])
+            if splat:
+                if not os.path.exists(txt_path):
+                    print(f"Splat file missing: {txt_path}")
+                    continue
 
-            except Exception as e:
-                print(f"Error on {row}: {e}")
+                los_result = "NLOS" if is_nlos(txt_path) else "LOS"
+                print(f"{gw_name}: {los_result}")
+
+                # Appliquer à toutes les lignes de cette gateway
+                for row in gw_rows:
+                    row["visibility"] = los_result
+
+        except Exception as e:
+            print(f"Error on gateway '{gw_name}': {e}")
+
 
     print("Writing results...")
-    with open(OUTPUT_CSV, "w", newline="") as outcsv:
-        writer = csv.writer(outcsv)
-        writer.writerow(["Gateway ID", "Name", "Latitude", "Longitude", "Distance(km)", "Visibility"])
-        writer.writerows(results)
+    with open(GATEWAY_CSV, "w", newline="") as outcsv:
+        writer = csv.DictWriter(outcsv, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
 
-    print(f"Results saved in {OUTPUT_CSV}")
+    print(f"Results saved in {GATEWAY_CSV}")
 
     # Déplacer tous les fichiers
     os.system("mv ./Galileo*.txt splat-runs/")

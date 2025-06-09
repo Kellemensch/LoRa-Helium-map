@@ -1,7 +1,8 @@
 import folium
 import pandas as pd
+from datetime import datetime
 
-LOS_CSV = "splat-runs/results/los_results.csv"
+LOS_CSV = "./data/helium_gateway_data.csv"
 END_DEVICE_LAT = 45.7038
 END_DEVICE_LON = 13.7204
 
@@ -46,20 +47,41 @@ function showSidebar(content) {
 m.get_root().html.add_child(folium.Element(html))
 
 
-for _, row in df.iterrows():
-    color = "green" if row["Visibility"] == "LOS" else "red"
-    lat = row["Latitude"]
-    lon = 360 - row["Longitude"]  # on remet la vraie longitude
+# Grouper les données par Gateway ID
+grouped = df.groupby("gatewayId")
 
+for gw_id, group in grouped:
+    # On prend la première ligne comme représentative pour les coordonnées
+    first = group.iloc[0]
+    color = "green" if first["visibility"] == "LOS" else "red"
+    lat = first["gateway_lat"]
+    lon = first["gateway_long"]  # remettre la vraie longitude
+    dist = first["dist_km"]
+
+    # Générer le bloc d'infos HTML avec les différentes dates
     info_html = f"""
-    <b>Gateway Name:</b> {row['Name']}<br>
-    <b>Gateway ID:</b> {row['Gateway ID']}<br>
+    <b>Gateway Name:</b> {first['gateway_name']}<br>
+    <b>Gateway ID:</b> {gw_id}<br>
     <b>Latitude:</b> {lat}<br>
     <b>Longitude:</b> {lon}<br>
-    <b>Visibility:</b> {row['Visibility']}<br>
+    <b>Distance:</b> {dist} km<br>
+    <b>Visibility:</b> {first['visibility']}<br>
+    <hr>
+    <b>Measurements:</b><br>
+    <ul>
     """
+    for _, row in group.sort_values("gwTime").iterrows():
+        try:
+            raw_date = pd.to_datetime(row["gwTime"])
+            readable_date = raw_date.strftime("%d %B %Y at %H:%M")  # ex : 06 june 2025 at 13:41
+        except Exception:
+            readable_date = "Invalid date"
+        
+        rssi = row.get("rssi", "N/A")
+        snr = row.get("snr", "N/A")
+        info_html += f"<li><b>{readable_date}</b>: RSSI = {rssi}, SNR = {snr}</li>"
 
-    # Ajout du point cliquable
+    # Ajout du point cliquable (cercle)
     folium.CircleMarker(
         location=[lat, lon],
         radius=6,
@@ -67,11 +89,11 @@ for _, row in df.iterrows():
         fill=True,
         fill_color=color,
         fill_opacity=0.8,
-        tooltip=row["Name"],
+        tooltip=first["gateway_name"],
         popup=folium.Popup("Click for more info", max_width=150),
     ).add_to(m)
 
-    # Ajout du script JS d'interaction
+    # Ajout du marqueur interactif (JS pour sidebar)
     folium.Marker(
         location=[lat, lon],
         icon=folium.DivIcon(html=f"""
@@ -79,13 +101,14 @@ for _, row in df.iterrows():
         """)
     ).add_to(m)
 
-    # Ligne vers l'end device
+    # Trait vers le end device
     folium.PolyLine(
         locations=[[lat, lon], map_center],
         color=color,
         weight=2,
         opacity=0.6
     ).add_to(m)
+
 
 # Sauvegarde
 m.save("map.html")
