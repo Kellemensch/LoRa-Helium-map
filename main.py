@@ -12,7 +12,10 @@ def run_all():
     time.sleep(2)
     p2 = subprocess.Popen(["python3", "webhook_server.py"])
     subprocesses.append(p2)
-    # subprocess.run(["python3", "generate_maps.py"])
+    p3 = subprocess.Popen(["python3", "run_splat.py"])
+    p3.wait()
+    p4 = subprocess.Popen(["python3","generate_maps.py"])
+    subprocesses.append(p4)
 
 def cleanup(signum=None, frame=None):
     print("Stopping all subprocesses...")

@@ -10,6 +10,9 @@ SDF_DIR = "maps"
 
 os.makedirs(QTH_DIR, exist_ok=True)
 os.makedirs("./data/results", exist_ok=True)
+os.makedirs("splat-runs/img", exist_ok=True)
+os.makedirs("splat-runs/results", exist_ok=True)
+
 
 def parse_end_node():
     with open(END_NODE_FILE, "r") as f:
@@ -17,13 +20,21 @@ def parse_end_node():
     return float(lat), float(lon), 2  # altitude en mètres (à adapter si nécessaire)
 
 def generate_qth(name, lat, lon, alt, path):
+    if os.path.exists(path):
+        print(f"QTH file already exists : {path}, skip.")
+        return
+    
     folder = os.path.dirname(path)
     os.makedirs(folder, exist_ok=True)
     with open(path, "w") as f:
         f.write(f"{name}\n{lat}\n{lon}\n{alt}")
         print(f"Generated QTH file: {path}")
 
-def run_splat(tx_qth, rx_qth, output_png):
+def run_splat(tx_qth, rx_qth, output_png, output_txt):
+    if os.path.exists(output_txt):
+        print(f"SPLAT output already exists: {output_txt}, skip.")
+        return 0
+
     # Exécute SPLAT en mode profil de terrain
     print("Running Splat...")
     result = subprocess.run(
@@ -34,8 +45,10 @@ def run_splat(tx_qth, rx_qth, output_png):
     )
     if result.returncode != 0:
         print(f"SPLAT error:\n{result.stderr}")
+        return 0
     else:
         print("SPLAT ran successfully")
+        return 1
 
 def is_nlos(splat_output):
     # Détecte la présence de NLOS dans le retour Splat Galileo-to-gw_name
@@ -68,16 +81,18 @@ def main():
 
                 print(f"Analysing {gw_name}...")
 
-                run_splat(f"{QTH_DIR}/galileo_end_node.qth", gw_qth, f"{gw_name}.png")
-
                 txt_path = f"Galileo-to-{gw_name}.txt"
-                if not os.path.exists(txt_path):
-                    print(f"Splat file missing : {txt_path}")
-                    continue
 
-                has_nlos = is_nlos(txt_path)
+                splat = run_splat(f"{QTH_DIR}/galileo_end_node.qth", gw_qth, f"{gw_name}.png", txt_path)
 
-                results.append([gw_id, gw_name, gw_lat, gw_lon, round(gw_distance, 2), "NLOS" if has_nlos else "LOS"])
+                if splat:
+                    if not os.path.exists(txt_path):
+                        print(f"Splat file missing : {txt_path}")
+                        continue
+
+                    has_nlos = is_nlos(txt_path)
+
+                    results.append([gw_id, gw_name, gw_lat, gw_lon, round(gw_distance, 2), "NLOS" if has_nlos else "LOS"])
 
             except Exception as e:
                 print(f"Error on {row}: {e}")
@@ -94,6 +109,8 @@ def main():
     os.system("mv ./Galileo*.txt splat-runs/")
     os.system("mv *.png ./splat-runs/img/")
     print("Moved files to splat-runs/")
+
+    return 0
 
 if __name__ == "__main__":
     main()

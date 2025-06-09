@@ -89,3 +89,4 @@ for _, row in df.iterrows():
 
 # Sauvegarde
 m.save("map.html")
+print("Map saved in map.html !")
