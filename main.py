@@ -1,13 +1,46 @@
 import subprocess
 import schedule
 import time
+import signal
+import sys
+
+subprocesses = []
 
 def run_all():
-    subprocess.Popen(["bash", "run_localtunnel.sh"])
+    p = subprocess.Popen(["bash", "run_localtunnel.sh"])
+    subprocesses.append(p)
     time.sleep(2)
-    subprocess.Popen(["python3", "webhook_server.py"])
+    p2 = subprocess.Popen(["python3", "webhook_server.py"])
+    subprocesses.append(p2)
     # subprocess.run(["python3", "generate_maps.py"])
 
+def cleanup(signum=None, frame=None):
+    print("Stopping all subprocesses...")
+    for p in subprocesses:
+        if p.poll() is None:  # Si le process est encore actif
+            try:
+                p.terminate()  # Envoie SIGTERM
+                p.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                print(f"Process {p.pid} does not respond, we kill it.")
+                p.kill()  # Envoie SIGKILL
+    sys.exit(0)
+
+# Enregistre les signaux (Ctrl+C et autres terminaisons)
+signal.signal(signal.SIGINT, cleanup)   # Ctrl+C
+signal.signal(signal.SIGTERM, cleanup)  # kill ou shutdown
+
+try:
+    run_all()
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+except KeyboardInterrupt:
+    # Catch redondant au cas où le signal ne capte pas tout
+    cleanup()
+
+
 # Lancer une fois ou régulièrement :
-run_all()
+# run_all()
 # schedule.every(1).hour.do(run_all)
