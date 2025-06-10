@@ -2,15 +2,18 @@ import csv
 import os
 import subprocess
 from collections import defaultdict
+import glob
+import shutil
 
 GATEWAY_CSV = "data/helium_gateway_data.csv"
 END_NODE_FILE = "data/terrain/galileo_end_node.qth"
 QTH_DIR = "data/terrain"
 SDF_DIR = "maps"
+RUNS_DIR = "splat-runs/"
+IMG_DIR = "splat-runs/img/"
 
 os.makedirs(QTH_DIR, exist_ok=True)
-os.makedirs("./data/results", exist_ok=True)
-os.makedirs("splat-runs/img", exist_ok=True)
+os.makedirs(IMG_DIR, exist_ok=True)
 
 
 def parse_end_node():
@@ -32,7 +35,7 @@ def generate_qth(name, lat, lon, alt, path):
 def run_splat(tx_qth, rx_qth, output_png, output_txt):
     if os.path.exists(output_txt):
         print(f"SPLAT output already exists: {output_txt}, skip.")
-        return 0
+        return 2
 
     # Exécute SPLAT en mode profil de terrain
     print("Running Splat...")
@@ -89,9 +92,12 @@ def main():
             txt_path = f"Galileo-to-{gw_name}.txt"
             png_path = f"{gw_name}.png"
 
-            splat = run_splat(f"{QTH_DIR}/galileo_end_node.qth", gw_qth, png_path, txt_path)
+            splat = run_splat(f"{END_NODE_FILE}", gw_qth, png_path, f"{RUNS_DIR}{txt_path}")
 
             if splat:
+                if splat == 2:
+                    txt_path = f"{RUNS_DIR}{txt_path}" # Le run a déjà été fait
+
                 if not os.path.exists(txt_path):
                     print(f"Splat file missing: {txt_path}")
                     continue
@@ -116,9 +122,19 @@ def main():
     print(f"Results saved in {GATEWAY_CSV}")
 
     # Déplacer tous les fichiers
-    os.system("mv ./Galileo*.txt splat-runs/")
-    os.system("mv *.png ./splat-runs/img/")
-    print("Moved files to splat-runs/")
+    for file in glob.glob('Galileo*.txt'):
+        dest = os.path.join(RUNS_DIR, os.path.basename(file))
+        if os.path.exists(dest):
+            os.replace(file, dest)  # Overwrites silently
+        else:
+            shutil.move(file, dest)
+
+    for file in glob.glob('*.png'):
+        dest = os.path.join(IMG_DIR, os.path.basename(file))
+        if os.path.exists(dest):
+            os.replace(file, dest)  # Overwrites silently
+        else:
+            shutil.move(file, dest)
 
     return 0
 
