@@ -39,6 +39,12 @@ install_splat() {
     fi
 }
 
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    echo "This script needs to be launched with 'source' :"
+    echo "   source $0"
+    exit 1
+fi
+
 echo "Initialisation..."
 
 # Vérifie que Python est installé
@@ -83,7 +89,7 @@ fi
 # Installation de l'outil srtm2sdf
 echo "Installing gnuplot"
 sudo apt install gnuplot
-
+# 
 if ! command -v srtm2sdf &> /dev/null
 then
     echo "Installing srtm2sdf util"
@@ -92,7 +98,7 @@ else
     echo "srtm2sdf util is installed."
 fi
 
-source venv/bin/activate
 
 echo "✅ Setup finished. Launch the project with:"
 echo "python3 main.py"
+# source venv/bin/activate
