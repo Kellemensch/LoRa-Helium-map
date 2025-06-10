@@ -1,10 +1,47 @@
 import folium
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone
+import requests
+from geopy.distance import geodesic
 
 LOS_CSV = "./data/helium_gateway_data.csv"
 END_DEVICE_LAT = 45.7038
 END_DEVICE_LON = 13.7204
+SONDE_RADIUS = 150 # Rayon max autour du point médian en km
+
+def midpoint(lat1, lon1, lat2, lon2):
+    return (lat1 + lat2) / 2, (lon1 + lon2) / 2
+
+def find_closest_sonde(lat, lon):
+    try:
+        response = requests.get("https://api.v2.sondehub.org/sondes", timeout=5)
+        response.raise_for_status()
+        sondes = response.json()
+        closest = None
+        min_distance = float("inf")
+        for serial, sonde in sondes.items():
+            if "lat" in sonde and "lon" in sonde:
+                sonde_pos = (sonde["lat"], sonde["lon"])
+                distance = geodesic((lat, lon), sonde_pos).kilometers
+
+                if distance < min_distance:
+                    min_distance = distance
+                    closest = {
+                        "serial": serial,
+                        "lat": sonde["lat"],
+                        "lon": sonde["lon"],
+                        "alt": sonde.get("alt"),
+                        "temperature": sonde.get("temp"),
+                        "humidity": sonde.get("humidity"),
+                        "pressure": sonde.get("pressure"),  # Peut ne pas exister
+                        "datetime": sonde.get("datetime"),
+                        "distance_km": round(distance, 2)
+                    }
+        return closest
+    except Exception as e:
+        print("Error getting radiosonde:", e)
+        return None
+
 
 df = pd.read_csv(LOS_CSV)
 map_center = [END_DEVICE_LAT, END_DEVICE_LON]
@@ -80,6 +117,26 @@ for gw_id, group in grouped:
         rssi = row.get("rssi", "N/A")
         snr = row.get("snr", "N/A")
         info_html += f"<li><b>{readable_date}</b>: RSSI = {rssi}, SNR = {snr}</li>"
+
+    # Radiosonde la plus proche du point médian
+    mid_lat, mid_lon = midpoint(END_DEVICE_LAT, END_DEVICE_LON, lat, lon)
+    sonde = find_closest_sonde(mid_lat, mid_lon)
+    if sonde:
+        info_html += f"""
+        <hr><b>Nearest radiosonde</b><br>
+        <b>ID:</b> {sonde.get("serial")}<br>
+        <b>Pos:</b> ({sonde.get("lat")}, {sonde.get("lon")})<br>
+        <b>Alt:</b> {sonde.get("alt")} m<br>
+        <b>Temp:</b> {sonde.get("temp")} °C<br>
+        <b>Humidity:</b> {sonde.get("humidity")} %<br>
+        <b>Pressure:</b> {sonde.get("pressure")} hPa<br>
+        """
+        # Marker sur la sonde
+        folium.Marker(
+            location=[sonde["lat"], sonde["lon"]],
+            tooltip=f"Sonde {sonde['serial']}",
+            icon=folium.Icon(color="purple", icon="cloud")
+        ).add_to(m)
 
     # Ajout du point cliquable (cercle)
     folium.CircleMarker(
