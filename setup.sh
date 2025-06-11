@@ -100,5 +100,5 @@ fi
 
 
 echo "✅ Setup finished. Launch the project with:"
-echo "python3 main.py"
+echo "      python3 main.py"
 # source venv/bin/activate
