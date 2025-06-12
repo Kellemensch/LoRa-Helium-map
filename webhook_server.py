@@ -9,6 +9,15 @@ import csv
 import os
 import math
 from flask import Flask, request, jsonify
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--logs", action="store_true")
+args = parser.parse_args()
+
+def log(*messages):
+    if args.logs:
+        print("[LOG]", *messages)
 
 app = Flask(__name__)
 
@@ -59,7 +68,7 @@ def helium_webhook():
             log_file.write(str(data) + "\n")
 
         # Stampa tutto il payload ricevuto per debugging
-        print("Dati ricevuti:", data)
+        log("Dati ricevuti:", data)
 
         # Estrai i dati dei gateway dalla lista 'rxInfo'
         rx_info_list = data.get("rxInfo", [])
@@ -102,7 +111,7 @@ def helium_webhook():
         return jsonify({"status": "success", "message": "Dati ricevuti e salvati in CSV"}), 200
 
     except Exception as e:
-        print("Errore:", e)
+        log("Errore:", e)
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':

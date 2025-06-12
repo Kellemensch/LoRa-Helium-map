@@ -4,8 +4,7 @@ import datetime
 import pandas as pd
 from math import radians, cos, sin, sqrt, atan2, degrees
 import matplotlib.pyplot as plt
-import numpy as np
-
+import argparse
 
 CURRENT_YEAR = datetime.datetime.now().year
 
@@ -20,16 +19,18 @@ END_NODE_LAT = 45.70377
 END_NODE_LON = 13.7204
 EARTH_RADIUS = 6371.0
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--logs", action="store_true")
+args = parser.parse_args()
+
+def log(*messages):
+    if args.logs:
+        print("[LOG]", *messages)
+
 os.makedirs(LOCAL_DIR, exist_ok=True)
 
 def get_stations():
     # Télécharge le fichier des stations
-    # try:
-    #     subprocess.run(["wget", "-O", STATIONS_FILE, IGRA_STATIONS_FILE], check=True)
-    # except subprocess.CalledProcessError:
-    #     print(f"Error downloading file {IGRA_STATIONS_FILE}")
-    #     subprocess.run(["rm", f"{STATIONS_FILE}"], check=True)
-    #     return
         
     # column LSTYEAR is 78-81
     stations = []
@@ -43,6 +44,7 @@ def get_stations():
 
 def download_igra_file(id):
     # télécharge le zip, décompresse et nettoie pour un id demandé
+    
     filename = f"{id}-drvd.txt.zip"
     local_path = os.path.join(LOCAL_DIR, f"{id}-drvd.txt")
     local_path_zip = f"{local_path}.zip"
@@ -56,7 +58,7 @@ def download_igra_file(id):
         subprocess.run(["rm", local_path_zip])
         return local_path
     except subprocess.CalledProcessError:
-        print(f"Error downloading {url}")
+        log(f"Error downloading {url}")
         subprocess.run(["rm", local_path_zip])
         return None
     
@@ -141,22 +143,23 @@ def compute_gradients(levels):
             gradients.append((h1, dN_dh))
     return gradients
 
-def plot_gradients(gradients, output_file, title_date):
+def plot_gradients(gradients, output_file, title_date, gateway_name, station_id):
     heights = [h for h, _ in gradients]
     dn_dh = [v for _, v in gradients]
 
     plt.figure(figsize=(6, 8))
-    plt.plot(dn_dh, heights, label='dN/dh (N/km)', color='blue')
-    plt.axvline(-157, color='red', linestyle='--', label='Seuil de ducting (-157 N/km)')
+    plt.plot(dn_dh, heights, label='dN/dh (km-1)', color='blue')
+    plt.axvline(-157, color='red', linestyle='--', label='Ducting threshold (-157 km-1)')
     plt.gca().invert_yaxis()
-    plt.xlabel('Gradient de réfractivité (N/km)')
-    plt.ylabel('Altitude (m)')
-    plt.title(f'Gradient de réfractivité – {title_date}')
+    plt.xlabel('Refractivity gradient (km-1)')
+    plt.ylabel('Height (m)')
+    plt.title(f'Refractivity gradient of {gateway_name} – {title_date} (Station {station_id})')
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
     plt.savefig(output_file)
     plt.close()
+    log(f"Graph saved in {output_file}")
 
 
 
@@ -176,23 +179,26 @@ def main(test_index=None):
         lat, lon = row["gateway_lat"], row["gateway_long"]
         mid_lat, mid_lon = spherical_midpoint(lat, lon, END_NODE_LAT, END_NODE_LON)
         date = row["gwTime"]
+        gw_name = row["gateway_name"]
+        output_image = f"{LOCAL_DIR}gradient_{gw_name}_{date.strftime('%Y-%m-%d')}.png"
+
 
         # Clé d'unicité : nom de la gateway et date (pas heure)
-        key = (row["gateway_name"], date.date())
+        key = (gw_name, date.date())
 
-        if key in already_processed:
-            print(f"Déjà traité : {key}")
+        if key in already_processed or os.path.exists(output_image):
+            log(f"Already processed : {key}")
             continue
         already_processed.add(key)
 
         closest = find_closest_station(mid_lat, mid_lon, stations)
         if not closest:
-            print("Aucune station proche trouvée.")
+            log("No near station found.")
             continue
 
         igra_file = download_igra_file(closest["id"])
         if not igra_file or not os.path.exists(igra_file):
-            print(f"Fichier IGRA introuvable : {igra_file}")
+            log(f"IGRA file not found : {igra_file}")
             continue
 
         results = parse_igra_derived_file(
@@ -204,12 +210,13 @@ def main(test_index=None):
 
         if results:
             gradients = compute_gradients(results[0]['levels'])
-            gateway_name_safe = row["gateway_name"].replace(" ", "_").replace("/", "_")
-            output_image = f"{LOCAL_DIR}gradient_{gateway_name_safe}_{date.strftime('%Y-%m-%d')}.png"
-            plot_gradients(gradients, output_image, date.strftime('%Y-%m-%d'))
-            print(f"Graphique sauvegardé : {output_image}")
+            # gateway_name_safe = row["gateway_name"].replace(" ", "_").replace("/", "_")
+            plot_gradients(gradients, output_image, date.strftime('%Y-%m-%d'), gw_name, closest["id"])
+
         else:
-            print("Aucun sounding trouvé pour cette date.")
+            log(f"No sounding found for this date. {date}, for {row["gateway_name"]}")
+
+    print(f"IGRA graphs saved in {LOCAL_DIR}")
 
 # Pour exécuter le script normalement :
 main()

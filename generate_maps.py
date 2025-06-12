@@ -1,9 +1,20 @@
 import folium
 import pandas as pd
+import argparse
 
 LOS_CSV = "./data/helium_gateway_data.csv"
 END_DEVICE_LAT = 45.7038
 END_DEVICE_LON = 13.7204
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--logs", action="store_true")
+args = parser.parse_args()
+
+def log(*messages):
+    if args.logs:
+        print("[LOG]", *messages)
+
 
 
 df = pd.read_csv(LOS_CSV)
@@ -55,7 +66,7 @@ for gw_id, group in grouped:
     first = group.iloc[0]
     color = "green" if first["visibility"] == "LOS" else "red"
     lat = first["gateway_lat"]
-    lon = first["gateway_long"]  # remettre la vraie longitude
+    lon = first["gateway_long"]
     dist = first["dist_km"]
 
     # Générer le bloc d'infos HTML avec les différentes dates

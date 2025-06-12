@@ -3,26 +3,58 @@ import schedule
 import time
 import signal
 import sys
+import argparse
+
+LOCALTUNNEL = "run_localtunnel.sh"
+WEBHOOK = "webhook_server.py"
+SPLAT = "run_splat.py"
+MAP_GENERATION = "generate_maps.py"
+IGRA = "calculate_igra.py"
+
+# Définir l'argument --logs
+parser = argparse.ArgumentParser(description="Logs option")
+parser.add_argument("--logs", action="store_true", help="Activate logs")
+args = parser.parse_args()
 
 subprocesses = []
 
 def run_all():
-    p = subprocess.Popen(["bash", "run_localtunnel.sh"])
+    if args.logs:
+        p = subprocess.Popen(["bash", LOCALTUNNEL, "--logs"])
+    else:
+        p = subprocess.Popen(["bash", LOCALTUNNEL])
     subprocesses.append(p)
     time.sleep(2)
-    p2 = subprocess.Popen(["python3", "webhook_server.py"])
+    if args.logs:
+        p2 = subprocess.Popen(["python3", WEBHOOK, "--logs"])
+    else:
+        p2 = subprocess.Popen(["python3", WEBHOOK])
     subprocesses.append(p2)
 
     run_map()
+    run_igra()
     
 
 def run_map():
     print("(Re)running SPLAT calculation and map generation on new data...")
-    p3 = subprocess.Popen(["python3", "run_splat.py"])
+    if args.logs:
+        p3 = subprocess.Popen(["python3", SPLAT, "--logs"])
+    else:
+        p3 = subprocess.Popen(["python3", SPLAT])
     p3.wait()
-    p4 = subprocess.Popen(["python3","generate_maps.py"])
+    if args.logs:
+        p4 = subprocess.Popen(["python3", MAP_GENERATION, "--logs"])
+    else:
+        p4 = subprocess.Popen(["python3", MAP_GENERATION])
     subprocesses.append(p4)
 
+def run_igra():
+    print("Running calculate_igra on data...")
+    if args.logs:
+        p5 = subprocess.Popen(["python3", IGRA, "--logs"])
+    else:
+        p5 = subprocess.Popen(["python3", IGRA])
+        subprocesses.append(p5)
 
 def cleanup(signum=None, frame=None):
     print("Stopping all subprocesses...")
@@ -45,6 +77,9 @@ try:
 
     # Lance le calcul splat et la génération de map toutes les 5 minutes
     schedule.every(5).minutes.do(run_map)
+
+    # Lance le calcul des stations IGRA 2 fois par jour
+    schedule.every(12).hours.do(run_igra)
 
     while True:
         schedule.run_pending()
