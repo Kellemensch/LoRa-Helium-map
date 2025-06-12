@@ -4,6 +4,7 @@ import subprocess
 from collections import defaultdict
 import glob
 import shutil
+import argparse
 
 GATEWAY_CSV = "data/helium_gateway_data.csv"
 END_NODE_FILE = "data/terrain/galileo_end_node.qth"
@@ -15,6 +16,14 @@ IMG_DIR = "splat-runs/img/"
 os.makedirs(QTH_DIR, exist_ok=True)
 os.makedirs(IMG_DIR, exist_ok=True)
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--logs", action="store_true")
+args = parser.parse_args()
+
+def log(*messages):
+    if args.logs:
+        print("[LOG]", *messages)
+
 
 def parse_end_node():
     with open(END_NODE_FILE, "r") as f:
@@ -23,22 +32,22 @@ def parse_end_node():
 
 def generate_qth(name, lat, lon, alt, path):
     if os.path.exists(path):
-        print(f"QTH file already exists : {path}, skip.")
+        log(f"QTH file already exists : {path}, skip.")
         return
     
     folder = os.path.dirname(path)
     os.makedirs(folder, exist_ok=True)
     with open(path, "w") as f:
         f.write(f"{name}\n{lat}\n{lon}\n{alt}")
-        print(f"Generated QTH file: {path}")
+        log(f"Generated QTH file: {path}")
 
 def run_splat(tx_qth, rx_qth, output_png, output_txt):
     if os.path.exists(output_txt):
-        print(f"SPLAT output already exists: {output_txt}, skip.")
+        log(f"SPLAT output already exists: {output_txt}, skip.")
         return 2
 
     # Exécute SPLAT en mode profil de terrain
-    print("Running Splat...")
+    log("Running Splat...")
     result = subprocess.run(
         ["splat", "-t", tx_qth, "-r", rx_qth, "-d", SDF_DIR, "-metric", "-f", "5800", "-H", output_png],
         stdout=subprocess.PIPE,
@@ -46,22 +55,22 @@ def run_splat(tx_qth, rx_qth, output_png, output_txt):
         text=True
     )
     if result.returncode != 0:
-        print(f"SPLAT error:\n{result.stderr}")
+        log(f"SPLAT error:\n{result.stderr}")
         return 0
     else:
-        print("SPLAT ran successfully")
+        log("SPLAT ran successfully")
         return 1
 
 def is_nlos(splat_output):
     # Détecte la présence de NLOS dans le retour Splat Galileo-to-gw_name
-    print("Running nlos detection...")
+    log("Running nlos detection...")
     try:
         with open(splat_output, "r", encoding="latin1") as f:
             content = f.read().lower()
-            print("Finished nlos detection")
+            log("Finished nlos detection")
             return "detected obstructions at" in content
     except FileNotFoundError:
-        print(f"File {splat_output} not found.")
+        log(f"File {splat_output} not found.")
         return False
 
 def main():
@@ -87,7 +96,7 @@ def main():
             gw_qth = f"{QTH_DIR}/{gw_name}.qth"
             generate_qth(gw_name, gw_lat, gw_lon, gw_alt, gw_qth)
 
-            print(f"Analysing {gw_name}...")
+            log(f"Analysing {gw_name}...")
 
             txt_path = f"Galileo-to-{gw_name}.txt"
             png_path = f"{gw_name}.png"
@@ -99,21 +108,21 @@ def main():
                     txt_path = f"{RUNS_DIR}{txt_path}" # Le run a déjà été fait
 
                 if not os.path.exists(txt_path):
-                    print(f"Splat file missing: {txt_path}")
+                    log(f"Splat file missing: {txt_path}")
                     continue
 
                 los_result = "NLOS" if is_nlos(txt_path) else "LOS"
-                print(f"{gw_name}: {los_result}")
+                log(f"{gw_name}: {los_result}")
 
                 # Appliquer à toutes les lignes de cette gateway
                 for row in gw_rows:
                     row["visibility"] = los_result
 
         except Exception as e:
-            print(f"Error on gateway '{gw_name}': {e}")
+            log(f"Error on gateway '{gw_name}': {e}")
 
 
-    print("Writing results...")
+    log("Writing results...")
     with open(GATEWAY_CSV, "w", newline="") as outcsv:
         writer = csv.DictWriter(outcsv, fieldnames=fieldnames)
         writer.writeheader()
