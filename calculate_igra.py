@@ -3,12 +3,15 @@ import subprocess
 import datetime
 import pandas as pd
 from math import radians, cos, sin, sqrt, atan2, degrees
+import matplotlib.pyplot as plt
+import numpy as np
+
 
 CURRENT_YEAR = datetime.datetime.now().year
 
-IGRA_FTP = "ftp://ftp.ncei.noaa.gov/pub/data/igra/data/data-y2d/"
+IGRA_FTP = "ftp://ftp.ncei.noaa.gov/pub/data/igra/derived/derived-por/"
 IGRA_STATIONS_FILE = "ftp://ftp.ncei.noaa.gov/pub/data/igra/igra2-station-list.txt"
-LOCAL_DIR = "./igra-datas/"
+LOCAL_DIR = "./igra-datas/derived/"
 INPUT_CSV = "./data/helium_gateway_data.csv"
 OUTPUT_CSV = "./igra-datas/weather-data.csv"
 STATIONS_FILE = "./igra-datas/igra2-station-list.txt"
@@ -40,8 +43,8 @@ def get_stations():
 
 def download_igra_file(id):
     # télécharge le zip, décompresse et nettoie pour un id demandé
-    filename = f"{id}-data-beg2021.txt.zip"
-    local_path = os.path.join(LOCAL_DIR, f"{id}-data.txt")
+    filename = f"{id}-drvd.txt.zip"
+    local_path = os.path.join(LOCAL_DIR, f"{id}-drvd.txt")
     local_path_zip = f"{local_path}.zip"
     if os.path.exists(local_path):
         return local_path
@@ -92,126 +95,125 @@ def find_closest_station(lat, lon, stations):
 
     return closest
 
-def extract_weather_for_date(txt_path: str, target_date: datetime.date) -> list[dict]:
-    """
-    Extrait les enregistrements IGRA correspondant à une date cible.
-    
-    Args:
-        txt_path: chemin vers le fichier IGRA .txt.
-        target_date: date (datetime.date) à chercher dans les enregistrements.
-    
-    Returns:
-        Une liste de dictionnaires avec les données météo extraites.
-    """
-    results = []
 
-    with open(txt_path, 'r') as f:
-        lines = f.readlines()
+def parse_igra_derived_file(filepath, target_year, target_month, target_day):
+    with open(filepath, 'r') as file:
+        lines = file.readlines()
 
-    i = 0
-    while i < len(lines):
-        line = lines[i]
+    data = []
+    current_sounding = None
+    inside_target_day = False
 
-        if line.startswith("#"):
+    for line in lines:
+        if line.startswith('#'):
+            year = int(line[13:17])
+            month = int(line[18:20])
+            day = int(line[21:23])
+
+            if year == target_year and month == target_month and day == target_day:
+                inside_target_day = True
+                if current_sounding:
+                    data.append(current_sounding)
+                current_sounding = {'date': (year, month, day), 'levels': []}
+            else:
+                inside_target_day = False
+        elif inside_target_day and current_sounding:
             try:
-                year = int(line[13:17])
-                month = int(line[18:20])
-                day = int(line[21:23])
-                hour = int(line[24:26])
-                n_levels = int(line[32:36])
-                lat = int(line[55:62]) / 1000
-                lon = int(line[63:71]) / 1000
-                station_id = line[1:12].strip()
-            except Exception as e:
-                i += 1
+                height = int(line[16:23].strip())
+                N = int(line[144:151].strip())
+                if height != -99999 and N != -99999:
+                    current_sounding['levels'].append((height, N))
+            except ValueError:
                 continue
 
-            record_date = datetime.date(year, month, day)
+    if current_sounding and current_sounding['levels']:
+        data.append(current_sounding)
 
-            if record_date == target_date:
-                weather_data = {
-                    "station_id": station_id,
-                    "date": record_date.isoformat(),
-                    "hour_utc": hour,
-                    "lat": lat,
-                    "lon": lon,
-                }
+    return data
 
-                # Lecture des niveaux associés
-                levels = []
-                for j in range(1, n_levels + 1):
-                    if i + j >= len(lines):
-                        break
-                    lvl_line = lines[i + j]
-                    try:
-                        pressure = int(lvl_line[9:15])
-                        geopot = int(lvl_line[16:21])
-                        temp = int(lvl_line[22:27]) / 10 if int(lvl_line[22:27]) != -9999 else None
-                        rh = int(lvl_line[28:33]) / 10 if int(lvl_line[28:33]) != -9999 else None
-                        wspd = int(lvl_line[46:51]) / 10 if int(lvl_line[46:51]) != -9999 else None
-                        wdir = int(lvl_line[40:45]) if int(lvl_line[40:45]) != -9999 else None
+def compute_gradients(levels):
+    gradients = []
+    for i in range(len(levels) - 1):
+        h1, N1 = levels[i]
+        h2, N2 = levels[i + 1]
+        if h2 != h1:
+            dN_dh = (N2 - N1) / (h2 - h1) * 1000  # N/km
+            gradients.append((h1, dN_dh))
+    return gradients
 
-                        levels.append({
-                            "pressure": pressure,
-                            "geopot": geopot,
-                            "temp_C": temp,
-                            "rh_pct": rh,
-                            "wind_speed_mps": wspd,
-                            "wind_dir_deg": wdir
-                        })
-                    except Exception:
-                        continue
+def plot_gradients(gradients, output_file, title_date):
+    heights = [h for h, _ in gradients]
+    dn_dh = [v for _, v in gradients]
 
-                weather_data["levels"] = levels
-                results.append(weather_data)
+    plt.figure(figsize=(6, 8))
+    plt.plot(dn_dh, heights, label='dN/dh (N/km)', color='blue')
+    plt.axvline(-157, color='red', linestyle='--', label='Seuil de ducting (-157 N/km)')
+    plt.gca().invert_yaxis()
+    plt.xlabel('Gradient de réfractivité (N/km)')
+    plt.ylabel('Altitude (m)')
+    plt.title(f'Gradient de réfractivité – {title_date}')
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(output_file)
+    plt.close()
 
-            i += n_levels + 1
-        else:
-            i += 1
 
-    return results
 
-def main():
+def main(test_index=None):
     df = pd.read_csv(INPUT_CSV)
     df["gwTime"] = pd.to_datetime(df["gwTime"], format='ISO8601')
+
     stations = get_stations()
 
-    weather_data = []
+    # Mode test unitaire : traiter seulement une ligne
+    if test_index is not None:
+        df = df.iloc[[test_index]]
+
+    already_processed = set()
 
     for _, row in df.iterrows():
         lat, lon = row["gateway_lat"], row["gateway_long"]
         mid_lat, mid_lon = spherical_midpoint(lat, lon, END_NODE_LAT, END_NODE_LON)
-        date = row["gwTime"].date()
+        date = row["gwTime"]
+
+        # Clé d'unicité : nom de la gateway et date (pas heure)
+        key = (row["gateway_name"], date.date())
+
+        if key in already_processed:
+            print(f"Déjà traité : {key}")
+            continue
+        already_processed.add(key)
 
         closest = find_closest_station(mid_lat, mid_lon, stations)
         if not closest:
-            weather_data.append((None, None, None))
+            print("Aucune station proche trouvée.")
             continue
 
         igra_file = download_igra_file(closest["id"])
-        results = extract_weather_for_date(igra_file, date)
-        # weather_data.append((closest["id"], results))
+        if not igra_file or not os.path.exists(igra_file):
+            print(f"Fichier IGRA introuvable : {igra_file}")
+            continue
+
+        results = parse_igra_derived_file(
+            igra_file,
+            date.year,
+            date.month,
+            date.day
+        )
 
         if results:
-            primary_result = results[0]  # ou fais un tri si tu veux l'heure la plus proche
-            data = row.to_dict()
-            # data["igra_station"] = closest["id"]
-            for k, v in primary_result.items():
-                if k != "levels":  # tu peux ignorer les niveaux détaillés si tu veux
-                    data[k] = v
+            gradients = compute_gradients(results[0]['levels'])
+            gateway_name_safe = row["gateway_name"].replace(" ", "_").replace("/", "_")
+            output_image = f"{LOCAL_DIR}gradient_{gateway_name_safe}_{date.strftime('%Y-%m-%d')}.png"
+            plot_gradients(gradients, output_image, date.strftime('%Y-%m-%d'))
+            print(f"Graphique sauvegardé : {output_image}")
         else:
-            data = row.to_dict()
-            # data["igra_station"] = closest["id"]
-            data["date"] = None  # ou autre valeur par défaut
-            data["hour_utc"] = None
+            print("Aucun sounding trouvé pour cette date.")
 
-        weather_data.append(data)
-
-
-        
-    # print(weather_data)
-    new_df = pd.DataFrame(weather_data)
-    new_df.to_csv(OUTPUT_CSV, index=False)
-    print(f"File saved in {OUTPUT_CSV}")
-
+# Pour exécuter le script normalement :
 main()
+
+# Pour exécuter en mode test sur la ligne 0 :
+# if __name__ == "__main__":
+#     main(test_index=1)
