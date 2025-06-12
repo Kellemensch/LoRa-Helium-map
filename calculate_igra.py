@@ -5,6 +5,7 @@ import pandas as pd
 from math import radians, cos, sin, sqrt, atan2, degrees
 import matplotlib.pyplot as plt
 import argparse
+import json
 
 CURRENT_YEAR = datetime.datetime.now().year
 
@@ -14,6 +15,7 @@ LOCAL_DIR = "./igra-datas/derived/"
 INPUT_CSV = "./data/helium_gateway_data.csv"
 OUTPUT_CSV = "./igra-datas/weather-data.csv"
 STATIONS_FILE = "./igra-datas/igra2-station-list.txt"
+OUTPUT_JSON = "./igra-datas/map_links.json"
 
 END_NODE_LAT = 45.70377
 END_NODE_LON = 13.7204
@@ -174,12 +176,14 @@ def main(test_index=None):
         df = df.iloc[[test_index]]
 
     already_processed = set()
+    json_output = {}
 
     for _, row in df.iterrows():
         lat, lon = row["gateway_lat"], row["gateway_long"]
         mid_lat, mid_lon = spherical_midpoint(lat, lon, END_NODE_LAT, END_NODE_LON)
         date = row["gwTime"]
         gw_name = row["gateway_name"]
+        gw_id = row["gatewayId"]
         output_image = f"{LOCAL_DIR}gradient_{gw_name}_{date.strftime('%Y-%m-%d')}.png"
 
 
@@ -213,10 +217,26 @@ def main(test_index=None):
             # gateway_name_safe = row["gateway_name"].replace(" ", "_").replace("/", "_")
             plot_gradients(gradients, output_image, date.strftime('%Y-%m-%d'), gw_name, closest["id"])
 
+            json_output[gw_id] = {
+                "gateway_name": gw_name,
+                "gateway_coords": [lat, lon],
+                "station_id": closest["id"],
+                "station_coords": [closest["lat"], closest["lon"]],
+                "midpoint": [mid_lat, mid_lon],
+                "graph": output_image
+            }
+
+            log("Results found and saved in json")
+
         else:
             log(f"No sounding found for this date. {date}, for {row["gateway_name"]}")
 
+    # Écriture du fichier JSON
+    with open(OUTPUT_JSON, "w") as f:
+        json.dump(json_output, f, indent=4)
+
     print(f"IGRA graphs saved in {LOCAL_DIR}")
+    log(f"Link file saved to {OUTPUT_JSON}")    
 
 # Pour exécuter le script normalement :
 main()
