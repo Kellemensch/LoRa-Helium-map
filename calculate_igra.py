@@ -6,6 +6,8 @@ from math import radians, cos, sin, sqrt, atan2, degrees
 import matplotlib.pyplot as plt
 import argparse
 import json
+import glob
+from configs import END_NODE_LAT, END_NODE_LON
 
 CURRENT_YEAR = datetime.datetime.now().year
 
@@ -17,8 +19,6 @@ OUTPUT_CSV = "./igra-datas/weather-data.csv"
 STATIONS_FILE = "./igra-datas/igra2-station-list.txt"
 OUTPUT_JSON = "./igra-datas/map_links.json"
 
-END_NODE_LAT = 45.70377
-END_NODE_LON = 13.7204
 EARTH_RADIUS = 6371.0
 
 parser = argparse.ArgumentParser()
@@ -30,6 +30,10 @@ def log(*messages):
         print("[LOG]", *messages)
 
 os.makedirs(LOCAL_DIR, exist_ok=True)
+# Supprime les anciens fichiers pour être sûr d'avoir les infos les plus récentes (png et données IGRA)
+for file in glob.glob(f"{LOCAL_DIR}*"):
+    os.remove(file)
+log("Removed all old files")
 
 def get_stations():
     # Télécharge le fichier des stations
@@ -155,7 +159,7 @@ def plot_gradients(gradients, output_file, title_date, gateway_name, station_id)
     plt.gca().invert_yaxis()
     plt.xlabel('Refractivity gradient (km-1)')
     plt.ylabel('Height (m)')
-    plt.title(f'Refractivity gradient of {gateway_name} – {title_date} (Station {station_id})')
+    plt.title(f'Refractivity gradient of {gateway_name} – {title_date} (Station {station_id})', wrap=True)
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
@@ -217,14 +221,20 @@ def main(test_index=None):
             # gateway_name_safe = row["gateway_name"].replace(" ", "_").replace("/", "_")
             plot_gradients(gradients, output_image, date.strftime('%Y-%m-%d'), gw_name, closest["id"])
 
-            json_output[gw_id] = {
-                "gateway_name": gw_name,
-                "gateway_coords": [lat, lon],
-                "station_id": closest["id"],
-                "station_coords": [closest["lat"], closest["lon"]],
-                "midpoint": [mid_lat, mid_lon],
-                "graph": output_image
-            }
+            if gw_id not in json_output:
+                json_output[gw_id] = {
+                    "gateway_name": gw_name,
+                    "gateway_coords": [lat, lon],
+                    "station_id": closest["id"],
+                    "station_coords": [closest["lat"], closest["lon"]],
+                    "midpoint": [mid_lat, mid_lon],
+                    "graphs": {}  # <- nouveau dictionnaire par date
+                }
+
+            # Ajouter le graphe du jour à "graphs"
+            date_key = pd.to_datetime(date).strftime("%Y-%m-%d")
+            json_output[gw_id]["graphs"][date_key] = output_image
+
 
             log("Results found and saved in json")
 
@@ -232,8 +242,9 @@ def main(test_index=None):
             log(f"No sounding found for this date. {date}, for {row["gateway_name"]}")
 
     # Écriture du fichier JSON
-    with open(OUTPUT_JSON, "w") as f:
-        json.dump(json_output, f, indent=4)
+    if json_output:
+        with open(OUTPUT_JSON, "w") as f:
+            json.dump(json_output, f, indent=4)
 
     print(f"IGRA graphs saved in {LOCAL_DIR}")
     log(f"Link file saved to {OUTPUT_JSON}")    

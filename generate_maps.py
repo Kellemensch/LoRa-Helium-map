@@ -3,11 +3,10 @@ import pandas as pd
 import argparse
 import json
 import html
+from configs import END_DEVICE_LAT, END_DEVICE_LON
 
 # === Paramètres ===
 LOS_CSV = "./data/helium_gateway_data.csv"
-END_DEVICE_LAT = 45.7038
-END_DEVICE_LON = 13.7204
 IGRA_LINKS_JSON = "./igra-datas/map_links.json"
 
 # === Argument ligne de commande ===
@@ -20,7 +19,9 @@ def log(*messages):
         print("[LOG]", *messages)
 
 def escape_js(s):
-    """Échappe le HTML pour injection sécurisée dans un attribut onclick JS"""
+    """\
+    Échappe le HTML pour injection sécurisée dans un attribut onclick JS
+    """
     return html.escape(s).replace("\n", "").replace("`", "\\`")
 
 # === Chargement des données ===
@@ -67,32 +68,16 @@ sidebar_html = """
 m.get_root().html.add_child(folium.Element(sidebar_html))
 
 # === Script JS (panneau + ligne) ===
-script = f"""
+script = """
 <script>
-function showSidebar(content) {{
+function showSidebar(content) {
     document.getElementById("info-content").innerHTML = content;
     document.getElementById("sidebar").style.display = "block";
-}}
+}
 
-function openModalWithImage(imgPath) {{
+function openModalWithImage(imgPath) {
     window.open(imgPath, '_blank', 'width=700,height=800');
-}}
-
-var igraLine;
-function drawIgraLine(stLat, stLon, gwLat, gwLon) {{
-    if (igraLine) {{
-        map.removeLayer(igraLine);
-    }}
-
-    let midLat = (gwLat + {END_DEVICE_LAT}) / 2;
-    let midLon = (gwLon + {END_DEVICE_LON}) / 2;
-
-    igraLine = L.polyline([[stLat, stLon], [midLat, midLon]], {{
-        color: 'blue',
-        weight: 2,
-        dashArray: '4'
-    }}).addTo(map);
-}}
+}
 </script>
 """
 m.get_root().header.add_child(folium.Element(script))
@@ -135,36 +120,39 @@ for gw_id, group in grouped:
     <b>Visibility:</b> {first['visibility']}<br>
     <hr><b>Measurements:</b><br><ul>
     """
+
+    js_call = ""
+    gw_graphs = igra_links.get(gw_id, {}).get("graphs", {})
+    st_coords = igra_links.get(gw_id, {}).get("station_coords")
+
     for _, row in group.sort_values("gwTime").iterrows():
         try:
             raw_date = pd.to_datetime(row["gwTime"])
             readable_date = raw_date.strftime("%d %B %Y at %H:%M")
+            graph_key = raw_date.strftime("%Y-%m-%d")
         except Exception:
             readable_date = "Invalid date"
-        
+            graph_key = None
+
         rssi = row.get("rssi", "N/A")
         snr = row.get("snr", "N/A")
-        info_html += f"<li><b>{readable_date}</b>: RSSI = {rssi}, SNR = {snr}</li>"
+        info_html += f"<li><b>{readable_date}</b>: RSSI = {rssi}, SNR = {snr}"
+
+        if graph_key and graph_key in gw_graphs:
+            graph_path = gw_graphs[graph_key].replace("./", "")
+            info_html += f"""
+            <br><button onclick=\"openModalWithImage('{graph_path}')\">
+                See IGRA graph of this day
+            </button>
+            """
+
+        info_html += "</li>"
     info_html += "</ul>"
 
-    # Ajout du bouton IGRA si disponible
-    js_call = ""
-    if gw_id in igra_links:
-        graph_rel_path = igra_links[gw_id]["graph"].replace("./", "")
-        st_lat, st_lon = igra_links[gw_id]["station_coords"]
-
-        info_html += f"""
-        <hr><button onclick="openModalWithImage('{graph_rel_path}')">See IGRA graph</button>
-        """
-        js_call += f"drawIgraLine({st_lat}, {st_lon}, {lat}, {lon});"
-    else:
-        js_call += "if (igraLine) { map.removeLayer(igraLine); igraLine = null; }"
-
-    # Échappement JS pour injection propre
+    # Injection JS et ajout sur la carte
     safe_html = escape_js(info_html)
     full_js = f"showSidebar(`{safe_html}`);{js_call}"
 
-    # Marqueur visuel et interactif
     folium.CircleMarker(
         location=[lat, lon],
         radius=6,
@@ -179,7 +167,7 @@ for gw_id, group in grouped:
     folium.Marker(
         location=[lat, lon],
         icon=folium.DivIcon(html=f"""
-            <div onclick="{full_js}" style="width:12px;height:12px;border-radius:6px;background:{color};cursor:pointer;"></div>
+            <div onclick=\"{full_js}\" style=\"width:12px;height:12px;border-radius:6px;background:{color};cursor:pointer;\"></div>
         """)
     ).add_to(m)
 
