@@ -7,11 +7,15 @@ import shutil
 import argparse
 
 GATEWAY_CSV = "data/helium_gateway_data.csv"
-END_NODE_FILE = "data/terrain/galileo_end_node.qth"
-QTH_DIR = "data/terrain"
-SDF_DIR = "maps"
+END_NODE_FILE = "data/terrain/end_node.qth"
+QTH_DIR = "data/terrain/"
+SDF_DIR = "maps/"
 RUNS_DIR = "splat-runs/"
 IMG_DIR = "splat-runs/img/"
+LONGITUDE_FILE = ".longitude"
+LATITUDE_FILE = ".latitude"
+latitude_end_node = 0
+longitude_end_node = 0
 
 os.makedirs(QTH_DIR, exist_ok=True)
 os.makedirs(IMG_DIR, exist_ok=True)
@@ -74,6 +78,15 @@ def is_nlos(splat_output):
         return False
 
 def main():
+    # Créer le end node en premier à l'aide des fichiers générés par setup.sh
+    with open(LATITUDE_FILE) as flat:
+        latitude_end_node = flat.readline()
+    with open(LONGITUDE_FILE) as flon:
+        longitude_end_node = flon.readline()
+
+    generate_qth("End-node", latitude_end_node, longitude_end_node, 3, END_NODE_FILE)
+
+
     with open(GATEWAY_CSV, newline="") as csvfile:
         reader = csv.DictReader(csvfile)
         rows = list(reader)
@@ -93,7 +106,7 @@ def main():
             gw_lon = 360 - float(sample_row["gateway_long"])
             gw_alt = 3
 
-            gw_qth = f"{QTH_DIR}/{gw_name}.qth"
+            gw_qth = f"{QTH_DIR}{gw_name}.qth"
             generate_qth(gw_name, gw_lat, gw_lon, gw_alt, gw_qth)
 
             log(f"Analysing {gw_name}...")

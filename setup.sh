@@ -45,7 +45,24 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     exit 1
 fi
 
+if [[ "$#" -ne 1 ]]; then
+    echo "This scripts needs to be launched with the subdomain name"
+    echo "   source $0 subdomain"
+    return 1 2>/dev/null || exit 1
+fi
+
+read -p "Latitude de votre end-node: " latitude
+read -p "Longitude de votre end-node: " longitude
+
+echo $longitude > configs/.longitude
+echo $latitude > configs/.latitude
+
+
+
 echo "Initialisation..."
+
+# Ecrit le nom du subdomain
+echo $1 > .subdomain
 
 # Vérifie que Python est installé
 if ! command -v python3 &> /dev/null

@@ -17,12 +17,14 @@ parser.add_argument("--logs", action="store_true", help="Activate logs")
 args = parser.parse_args()
 
 subprocesses = []
+with open(".subdomain", "r") as f:
+    subdomain = f.readline()
 
 def run_all():
     if args.logs:
-        p = subprocess.Popen(["bash", LOCALTUNNEL, "--logs"])
+        p = subprocess.Popen(["bash", LOCALTUNNEL, subdomain, "--logs"])
     else:
-        p = subprocess.Popen(["bash", LOCALTUNNEL])
+        p = subprocess.Popen(["bash", LOCALTUNNEL, subdomain])
     subprocesses.append(p)
     time.sleep(2)
     if args.logs:
@@ -31,8 +33,8 @@ def run_all():
         p2 = subprocess.Popen(["python3", WEBHOOK])
     subprocesses.append(p2)
 
-    run_map()
     run_igra()
+    run_map()
     
 
 def run_map():
