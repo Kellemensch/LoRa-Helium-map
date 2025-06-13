@@ -51,8 +51,8 @@ if [[ "$#" -ne 1 ]]; then
     return 1 2>/dev/null || exit 1
 fi
 
-read -p "Latitude de votre end-node: " latitude
-read -p "Longitude de votre end-node: " longitude
+read -p "Latitude de votre end-node (ex: 45.70377): " latitude
+read -p "Longitude de votre end-node (ex: 13.7204): " longitude
 
 echo $longitude > configs/.longitude
 echo $latitude > configs/.latitude
@@ -62,7 +62,7 @@ echo $latitude > configs/.latitude
 echo "Initialisation..."
 
 # Ecrit le nom du subdomain
-echo $1 > .subdomain
+echo $1 > configs/.subdomain
 
 # Vérifie que Python est installé
 if ! command -v python3 &> /dev/null

@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import argparse
 import json
 import glob
-from configs import END_NODE_LAT, END_NODE_LON
+from configs.config_coords import END_DEVICE_LAT, END_DEVICE_LON
 
 CURRENT_YEAR = datetime.datetime.now().year
 
@@ -184,7 +184,7 @@ def main(test_index=None):
 
     for _, row in df.iterrows():
         lat, lon = row["gateway_lat"], row["gateway_long"]
-        mid_lat, mid_lon = spherical_midpoint(lat, lon, END_NODE_LAT, END_NODE_LON)
+        mid_lat, mid_lon = spherical_midpoint(lat, lon, END_DEVICE_LAT, END_DEVICE_LON)
         date = row["gwTime"]
         gw_name = row["gateway_name"]
         gw_id = row["gatewayId"]

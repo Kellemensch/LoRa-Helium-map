@@ -10,6 +10,7 @@ import os
 import math
 from flask import Flask, request, jsonify
 import argparse
+from configs.config_coords import END_DEVICE_LAT, END_DEVICE_LON
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--logs", action="store_true")
@@ -35,8 +36,8 @@ CSV_HEADER = ["gwTime", "gatewayId", "gateway_name", "gateway_id",
 # ----------------------------------------------------------------------------
 # **POSIZIONE DEL NODO (Da impostare manualmente)**
 # posizione del logger installato sul GGH (45.70377, 13.72040)
-NODE_LAT = 45.70377         # Sostituisci con la latitudine reale del nodo
-NODE_LONG = 13.72040        # Sostituisci con la longitudine reale del nodo
+# NODE_LAT = 45.70377         # Sostituisci con la latitudine reale del nodo
+# NODE_LONG = 13.72040        # Sostituisci con la longitudine reale del nodo
 # posizione di test del 04/03/2025
 # NODE_LAT = 45.70445       # Sostituisci con la latitudine reale del nodo
 # NODE_LONG = 13.71931      # Sostituisci con la longitudine reale del nodo
@@ -99,13 +100,13 @@ def helium_webhook():
 
                 # Calcola la distanza solo se tutti i valori sono validi
                 if gateway_lat is not None and gateway_long is not None:
-                    dist_km = haversine(NODE_LAT, NODE_LONG, gateway_lat, gateway_long)
+                    dist_km = haversine(END_DEVICE_LAT, END_DEVICE_LON, gateway_lat, gateway_long)
                 else:
                     dist_km = "N/A"
 
                 # Scrive una riga nel CSV
                 writer.writerow([gwTime, gatewayId, gateway_name, gateway_id, 
-                                 NODE_LONG, NODE_LAT, gateway_long, gateway_lat, 
+                                 END_DEVICE_LON, END_DEVICE_LAT, gateway_long, gateway_lat, 
                                  dist_km, rssi, snr, "N/A"])
 
         return jsonify({"status": "success", "message": "Dati ricevuti e salvati in CSV"}), 200

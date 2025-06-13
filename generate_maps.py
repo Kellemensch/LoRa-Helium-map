@@ -3,7 +3,7 @@ import pandas as pd
 import argparse
 import json
 import html
-from configs import END_DEVICE_LAT, END_DEVICE_LON
+from configs.config_coords import END_DEVICE_LAT, END_DEVICE_LON
 
 # === Paramètres ===
 LOS_CSV = "./data/helium_gateway_data.csv"
