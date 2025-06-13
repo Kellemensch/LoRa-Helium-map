@@ -5,6 +5,7 @@ from collections import defaultdict
 import glob
 import shutil
 import argparse
+from configs.config_coords import END_DEVICE_LAT, END_DEVICE_LON
 
 GATEWAY_CSV = "data/helium_gateway_data.csv"
 END_NODE_FILE = "data/terrain/end_node.qth"
@@ -12,10 +13,6 @@ QTH_DIR = "data/terrain/"
 SDF_DIR = "maps/"
 RUNS_DIR = "splat-runs/"
 IMG_DIR = "splat-runs/img/"
-LONGITUDE_FILE = ".longitude"
-LATITUDE_FILE = ".latitude"
-latitude_end_node = 0
-longitude_end_node = 0
 
 os.makedirs(QTH_DIR, exist_ok=True)
 os.makedirs(IMG_DIR, exist_ok=True)
@@ -34,15 +31,26 @@ def parse_end_node():
         lat, lon = f.read().strip().split(",")
     return float(lat), float(lon), 2  # altitude en mètres (à adapter si nécessaire)
 
+def generate_end_node():
+    if os.path.exists(END_NODE_FILE):
+        log(f"QTH file already exists : {END_NODE_FILE}, skip.")
+        return
+    print
+    folder = os.path.dirname(END_NODE_FILE)
+    os.makedirs(folder, exist_ok=True)
+    with open(END_NODE_FILE, "w") as f:
+        f.write(f"End-node\n{END_DEVICE_LAT}\n{360-END_DEVICE_LON}\n{3}") # Pour que ce soit lisible par splat : lon = 360 - lon
+        log(f"Generated QTH file: {END_NODE_FILE}")
+
 def generate_qth(name, lat, lon, alt, path):
     if os.path.exists(path):
         log(f"QTH file already exists : {path}, skip.")
         return
-    
+    print
     folder = os.path.dirname(path)
     os.makedirs(folder, exist_ok=True)
     with open(path, "w") as f:
-        f.write(f"{name}\n{lat}\n{lon}\n{alt}")
+        f.write(f"{name}\n{lat}\n{360-lon}\n{alt}") # Pour que ce soit lisible par splat : lon = 360 - lon
         log(f"Generated QTH file: {path}")
 
 def run_splat(tx_qth, rx_qth, output_png, output_txt):
@@ -78,13 +86,7 @@ def is_nlos(splat_output):
         return False
 
 def main():
-    # Créer le end node en premier à l'aide des fichiers générés par setup.sh
-    with open(LATITUDE_FILE) as flat:
-        latitude_end_node = flat.readline()
-    with open(LONGITUDE_FILE) as flon:
-        longitude_end_node = flon.readline()
-
-    generate_qth("End-node", latitude_end_node, longitude_end_node, 3, END_NODE_FILE)
+    generate_end_node()
 
 
     with open(GATEWAY_CSV, newline="") as csvfile:
@@ -103,7 +105,7 @@ def main():
         try:
             sample_row = gw_rows[0]
             gw_lat = float(sample_row["gateway_lat"])
-            gw_lon = 360 - float(sample_row["gateway_long"])
+            gw_lon = float(sample_row["gateway_long"])
             gw_alt = 3
 
             gw_qth = f"{QTH_DIR}{gw_name}.qth"
@@ -111,7 +113,7 @@ def main():
 
             log(f"Analysing {gw_name}...")
 
-            txt_path = f"Galileo-to-{gw_name}.txt"
+            txt_path = f"End-node-to-{gw_name}.txt"
             png_path = f"{gw_name}.png"
 
             splat = run_splat(f"{END_NODE_FILE}", gw_qth, png_path, f"{RUNS_DIR}{txt_path}")
@@ -144,7 +146,7 @@ def main():
     print(f"Results saved in {GATEWAY_CSV}")
 
     # Déplacer tous les fichiers
-    for file in glob.glob('Galileo*.txt'):
+    for file in glob.glob('End-node*.txt'):
         dest = os.path.join(RUNS_DIR, os.path.basename(file))
         if os.path.exists(dest):
             os.replace(file, dest)  # Overwrites silently

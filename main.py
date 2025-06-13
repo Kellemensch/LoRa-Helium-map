@@ -17,7 +17,7 @@ parser.add_argument("--logs", action="store_true", help="Activate logs")
 args = parser.parse_args()
 
 subprocesses = []
-with open(".subdomain", "r") as f:
+with open("configs/.subdomain", "r") as f:
     subdomain = f.readline()
 
 def run_all():
