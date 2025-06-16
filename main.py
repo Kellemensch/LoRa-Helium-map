@@ -4,6 +4,7 @@ import time
 import signal
 import sys
 import argparse
+import os
 
 LOCALTUNNEL = "run_localtunnel.sh"
 WEBHOOK = "webhook_server.py"
@@ -71,12 +72,20 @@ def cleanup(signum=None, frame=None):
                 p.kill()  # Envoie SIGKILL
     sys.exit(0)
 
+def fix_output_ownership():
+    uid = os.environ.get("HOST_UID")
+    gid = os.environ.get("HOST_GID")
+    if uid and gid:
+        subprocess.run(["chown", "-R", f"{uid}:{gid}", "output"])
+
+
 # Enregistre les signaux (Ctrl+C et autres terminaisons)
 signal.signal(signal.SIGINT, cleanup)   # Ctrl+C
 signal.signal(signal.SIGTERM, cleanup)  # kill ou shutdown
 
 try:
     run_all()
+    fix_output_ownership()
 
     # Lance le calcul splat et la génération de map toutes les 5 minutes
     schedule.every(5).minutes.do(run_map)

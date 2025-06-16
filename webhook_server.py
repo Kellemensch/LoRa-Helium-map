@@ -23,10 +23,10 @@ def log(*messages):
 app = Flask(__name__)
 
 # File di log per i messaggi originali
-LOG_FILE = "./data/helium_data_msg.txt"
+LOG_FILE = "/app/output/data/helium_data_msg.txt"
 
 # Nome del file CSV
-CSV_FILE = "./data/helium_gateway_data.csv"
+CSV_FILE = "/app/output/data/helium_gateway_data.csv"
 
 # Definizione dell'header del CSV
 CSV_HEADER = ["gwTime", "gatewayId", "gateway_name", "gateway_id", 
