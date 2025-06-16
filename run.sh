@@ -10,4 +10,6 @@ docker run -it --rm \
   -v "$(pwd)/output:/app/output" \
   -e HOST_UID=$UID_LOCAL \
   -e HOST_GID=$GID_LOCAL \
+  --dns 8.8.8.8 \
+  --name lora-map \
   lora-helium-map

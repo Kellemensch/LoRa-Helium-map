@@ -44,8 +44,9 @@ CSV_HEADER = ["gwTime", "gatewayId", "gateway_name", "gateway_id",
 # ----------------------------------------------------------------------------
 
 # Creazione del file CSV se non esiste
+os.makedirs(os.path.dirname(CSV_FILE), exist_ok=True)
 if not os.path.exists(CSV_FILE):
-    with open(CSV_FILE, mode='w', newline='') as file:
+    with open(CSV_FILE, mode='x', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(CSV_HEADER)  # Scrive l'intestazione del file CSV
 
