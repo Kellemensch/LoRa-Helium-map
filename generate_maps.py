@@ -107,9 +107,9 @@ grouped = df.groupby("gatewayId")
 for gw_id, group in grouped:
     first = group.iloc[0]
     color = "green" if first["visibility"] == "LOS" else "red"
-    lat = first["gateway_lat"]
-    lon = first["gateway_long"]
-    dist = first["dist_km"]
+    lat = round(first["gateway_lat"], 5)
+    lon = round(first["gateway_long"], 5)
+    dist = round(first["dist_km"], 2)
 
     info_html = f"""
     <b>Gateway Name:</b> {first['gateway_name']}<br>

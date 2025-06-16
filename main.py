@@ -56,7 +56,8 @@ def run_igra():
         p5 = subprocess.Popen(["python3", IGRA, "--logs"])
     else:
         p5 = subprocess.Popen(["python3", IGRA])
-        subprocesses.append(p5)
+    subprocesses.append(p5)
+    p5.wait()
 
 def cleanup(signum=None, frame=None):
     print("Stopping all subprocesses...")
