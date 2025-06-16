@@ -7,12 +7,12 @@ import shutil
 import argparse
 from configs.config_coords import END_DEVICE_LAT, END_DEVICE_LON
 
-GATEWAY_CSV = "data/helium_gateway_data.csv"
-END_NODE_FILE = "data/terrain/end_node.qth"
-QTH_DIR = "data/terrain/"
-SDF_DIR = "maps/"
-RUNS_DIR = "splat-runs/"
-IMG_DIR = "splat-runs/img/"
+GATEWAY_CSV = "/app/output/data/helium_gateway_data.csv"
+END_NODE_FILE = "app/output/data/terrain/end_node.qth"
+QTH_DIR = "app/output/data/terrain/"
+SDF_DIR = "app/output/maps/"
+RUNS_DIR = "app/output/splat-runs/"
+IMG_DIR = "app/output/splat-runs/img/"
 
 os.makedirs(QTH_DIR, exist_ok=True)
 os.makedirs(IMG_DIR, exist_ok=True)

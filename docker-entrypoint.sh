@@ -1,17 +1,33 @@
 #!/bin/bash
 set -e
 
-# Activer l’environnement virtuel
+# Activer le venv
 source venv/bin/activate
 
-read -p "Latitude of the end-node (ex: 45.70377): " latitude
-echo "$latitude" > configs/.latitude
+echo "🔧 Initialisation de la configuration..."
 
-read -p "Longitude of the end-node (ex: 13.7204): " longitude
-echo "$longitude" > configs/.longitude
+# Lire latitude et longitude s'ils ne sont pas déjà définis
+if [ ! -f configs/.latitude ]; then
+  read -p "Latitude de votre end-node (ex: 45.70377): " latitude
+  echo "$latitude" > configs/.latitude
+else
+  echo "✅ Latitude déjà définie : $(cat configs/.latitude)"
+fi
 
-read -p "Subdomain name for localtunnel : " subdomain
-echo "$subdomain" > configs/.subdomain
+if [ ! -f configs/.longitude ]; then
+  read -p "Longitude de votre end-node (ex: 13.7204): " longitude
+  echo "$longitude" > configs/.longitude
+else
+  echo "✅ Longitude déjà définie : $(cat configs/.longitude)"
+fi
 
-# Lancer le script principal
+# Lire le subdomain si absent
+if [ ! -f configs/.subdomain ]; then
+  read -p "Nom du subdomain localtunnel : " subdomain
+  echo "$subdomain" > configs/.subdomain
+else
+  echo "✅ Subdomain déjà défini : $(cat configs/.subdomain)"
+fi
+
+echo "🚀 Lancement de l'application..."
 python3 main.py --logs

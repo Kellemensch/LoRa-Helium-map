@@ -13,11 +13,11 @@ CURRENT_YEAR = datetime.datetime.now().year
 
 IGRA_FTP = "ftp://ftp.ncei.noaa.gov/pub/data/igra/derived/derived-por/"
 IGRA_STATIONS_FILE = "ftp://ftp.ncei.noaa.gov/pub/data/igra/igra2-station-list.txt"
-LOCAL_DIR = "./igra-datas/derived/"
-INPUT_CSV = "./data/helium_gateway_data.csv"
-OUTPUT_CSV = "./igra-datas/weather-data.csv"
-STATIONS_FILE = "./igra-datas/igra2-station-list.txt"
-OUTPUT_JSON = "./igra-datas/map_links.json"
+LOCAL_DIR = "/app/output/igra-datas/derived/"
+INPUT_CSV = "/app/output/data/helium_gateway_data.csv"
+OUTPUT_CSV = "/app/output/igra-datas/weather-data.csv"
+STATIONS_FILE = "/app/output/igra-datas/igra2-station-list.txt"
+OUTPUT_JSON = "/app/output/igra-datas/map_links.json"
 
 EARTH_RADIUS = 6371.0
 
@@ -37,6 +37,12 @@ log("Removed all old files")
 
 def get_stations():
     # Télécharge le fichier des stations
+    if not os.path.exists(STATIONS_FILE):
+        try:
+            subprocess.run(["wget", "-O", STATIONS_FILE, IGRA_STATIONS_FILE], check=True)
+        except subprocess.CalledProcessError:
+            log(f"Error downloading {IGRA_STATIONS_FILE}")
+            return None
         
     # column LSTYEAR is 78-81
     stations = []

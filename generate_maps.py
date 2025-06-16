@@ -6,8 +6,9 @@ import html
 from configs.config_coords import END_DEVICE_LAT, END_DEVICE_LON
 
 # === Paramètres ===
-LOS_CSV = "./data/helium_gateway_data.csv"
-IGRA_LINKS_JSON = "./igra-datas/map_links.json"
+LOS_CSV = "/app/output/data/helium_gateway_data.csv"
+IGRA_LINKS_JSON = "/app/output/igra-datas/map_links.json"
+OUTPUT_MAP = "/app/output/map.html"
 
 # === Argument ligne de commande ===
 parser = argparse.ArgumentParser()
@@ -179,5 +180,5 @@ for gw_id, group in grouped:
     ).add_to(m)
 
 # === Sauvegarde finale ===
-m.save("map.html")
-print("Map saved in map.html !")
+m.save(OUTPUT_MAP)
+print(f"Map saved in {OUTPUT_MAP} !")
