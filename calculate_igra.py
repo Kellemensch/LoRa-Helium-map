@@ -239,7 +239,7 @@ def main(test_index=None):
             log("Results found and saved in json")
 
         else:
-            log(f"No sounding found for this date. {date}, for {row["gateway_name"]}")
+            log(f"No sounding found for this date. {date}, for {gw_name}")
 
     # Écriture du fichier JSON
     if json_output:
