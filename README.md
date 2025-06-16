@@ -6,12 +6,13 @@ A Python toolkit to retrieve real-time datas from a LoRaWan end-node connected t
 
 ## Features
 
+-  Retrieve packets information and gateways received from the end-node
+-  Find the nearest [IGRA radiosonde](https://www.ncei.noaa.gov/products/weather-balloon/integrated-global-radiosonde-archive) from the link gateway <-> end-node
 -  Parse raw IGRA v2 `.txt` files (multi-level radiosonde observations)
 -  Compute refractivity (N) and its vertical gradient (ΔN/Δh)
--  Detect tropospheric ducts (threshold at -157 N/km)
+-  Detect tropospheric ducts
 -  Generate vertical gradient graphs in PNG format
--  Handles incomplete or sparse radiosonde levels
--  Automatable for large-scale batch analysis
+-  Generate an interactive map showing all the gateways receiving the packets with their corresponding graphs
 
 ---
 
@@ -72,6 +73,12 @@ Or with logs showing on Shell
 ``` bash
 python3 main.py --logs
 ```
+
+## Results
+
+The output map will be generated as *map.html* and can be open with a web browser.
+
+All the gradients graphs can be found in *igra-datas/derived/*
 
 ## Example Output
 

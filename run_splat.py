@@ -50,7 +50,7 @@ def generate_qth(name, lat, lon, alt, path):
     folder = os.path.dirname(path)
     os.makedirs(folder, exist_ok=True)
     with open(path, "w") as f:
-        f.write(f"{name}\n{lat}\n{360-lon}\n{alt}") # Pour que ce soit lisible par splat : lon = 360 - lon
+        f.write(f"{name}\n{lat}\n{360-lon}\n{alt}m") # Pour que ce soit lisible par splat : lon = 360 - lon
         log(f"Generated QTH file: {path}")
 
 def run_splat(tx_qth, rx_qth, output_png, output_txt):
