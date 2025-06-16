@@ -5,7 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Installer tout ce qu'il faut dans l'image
 RUN apt-get update && apt-get install -y \
     python3 python3-pip python3-venv \
-    build-essential gfortran libpng-dev wget unzip \
+    build-essential gfortran libpng-dev wget unzip g++ libbz2-dev zlib1g-dev xvfb\
     gnuplot nodejs npm curl tar bzip2 \
  && npm install -g localtunnel \
  && rm -rf /var/lib/apt/lists/*
@@ -17,6 +17,7 @@ RUN mkdir -p /usr/src/splat && cd /usr/src/splat && \
     printf "4\n4\n4\n" | ./configure && \
     ./utils/install srtm2sdf
 
+ENV PATH="/usr/src/splat/splat-1.4.2:${PATH}"
 
 # Définir le dossier de travail
 WORKDIR /app
