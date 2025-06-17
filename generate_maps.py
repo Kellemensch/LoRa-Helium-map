@@ -3,12 +3,13 @@ import pandas as pd
 import argparse
 import json
 import html
+from datetime import datetime
 from configs.config_coords import END_DEVICE_LAT, END_DEVICE_LON
 
 # === Paramètres ===
-LOS_CSV = "/app/output/data/helium_gateway_data.csv"
-IGRA_LINKS_JSON = "/app/output/igra-datas/map_links.json"
-OUTPUT_MAP = "/app/output/map.html"
+LOS_CSV = "data/helium_gateway_data.csv"
+IGRA_LINKS_JSON = "igra-datas/map_links.json"
+OUTPUT_MAP = "map2.html"
 
 # === Argument ligne de commande ===
 parser = argparse.ArgumentParser()
@@ -37,53 +38,23 @@ except FileNotFoundError:
     igra_links = {}
     log(f"File {IGRA_LINKS_JSON} not found. No graph will be linked")
 
+# === Préparation des dates ===
+df['date'] = pd.to_datetime(df['gwTime'], format='ISO8601').dt.strftime('%Y-%m-%d')
+all_dates = sorted(df['date'].unique())
+
+
+
 # === Création de la carte ===
 m = folium.Map(location=map_center, zoom_start=12)
 
-# End device
+# === End device (toujours visible) ===
 folium.Marker(
     location=map_center,
     icon=folium.Icon(color="blue"),
     tooltip="End Device"
 ).add_to(m)
 
-# === HTML pour panneau latéral ===
-sidebar_html = """
-<div id="sidebar" style="
-    position: absolute;
-    top: 50px;
-    right: 0;
-    width: 300px;
-    height: 90%;
-    background-color: white;
-    z-index: 1000;
-    overflow-y: auto;
-    padding: 10px;
-    box-shadow: -2px 0 5px rgba(0,0,0,0.4);
-    display: none;
-">
-    <h4>Information</h4>
-    <div id="info-content">Click on a point</div>
-</div>
-"""
-m.get_root().html.add_child(folium.Element(sidebar_html))
-
-# === Script JS (panneau + ligne) ===
-script = """
-<script>
-function showSidebar(content) {
-    document.getElementById("info-content").innerHTML = content;
-    document.getElementById("sidebar").style.display = "block";
-}
-
-function openModalWithImage(imgPath) {
-    window.open(imgPath, '_blank', 'width=700,height=800');
-}
-</script>
-"""
-m.get_root().header.add_child(folium.Element(script))
-
-# === Affichage des stations IGRA ===
+# === Affichage des stations IGRA (toujours visibles) ===
 added_stations = set()
 for gw_info in igra_links.values():
     st_lat, st_lon = gw_info["station_coords"]
@@ -96,64 +67,57 @@ for gw_info in igra_links.values():
     folium.CircleMarker(
         location=[st_lat, st_lon],
         radius=5,
-        color="blue",
+        color="purple",
         fill=True,
-        fill_color="blue",
+        fill_color="purple",
         fill_opacity=0.8,
         tooltip=f"IGRA station {st_id}"
     ).add_to(m)
 
-# === Affichage des gateways ===
-grouped = df.groupby("gatewayId")
-for gw_id, group in grouped:
-    first = group.iloc[0]
-    color = "green" if first["visibility"] == "LOS" else "red"
-    lat = round(first["gateway_lat"], 5)
-    lon = round(first["gateway_long"], 5)
-    dist = round(first["dist_km"], 2)
+# === Dictionnaire pour stocker les FeatureGroups ===
+date_groups = {}
 
+# === Création des FeatureGroups pour chaque date ===
+for date in all_dates:
+    date_groups[date] = folium.FeatureGroup(name=f"Date: {date}", show=False)
+    date_groups[date].add_to(m)
+
+# === Affichage des gateways ===
+for _, row in df.iterrows():
+    date = row['date']
+    color = "green" if row["visibility"] == "LOS" else "red"
+    lat = round(row["gateway_lat"], 5)
+    lon = round(row["gateway_long"], 5)
+    
+    # Info HTML pour le panneau latéral
     info_html = f"""
-    <b>Gateway Name:</b> {first['gateway_name']}<br>
-    <b>Gateway ID:</b> {gw_id}<br>
+    <b>Gateway Name:</b> {row['gateway_name']}<br>
+    <b>Gateway ID:</b> {row['gatewayId']}<br>
     <b>Latitude:</b> {lat}<br>
     <b>Longitude:</b> {lon}<br>
-    <b>Distance:</b> {dist} km<br>
-    <b>Visibility:</b> {first['visibility']}<br>
-    <hr><b>Measurements:</b><br><ul>
+    <b>Distance:</b> {round(row['dist_km'], 2)} km<br>
+    <b>Visibility:</b> {row['visibility']}<br>
+    <hr><b>Measurement:</b><br>
+    <b>Date:</b> {pd.to_datetime(row['gwTime']).strftime('%d %B %Y at %H:%M')}<br>
+    <b>RSSI:</b> {row.get('rssi', 'N/A')}<br>
+    <b>SNR:</b> {row.get('snr', 'N/A')}<br>
     """
-
-    js_call = ""
+    
+    # Ajouter le graph IGRA si disponible
+    gw_id = row['gatewayId']
     gw_graphs = igra_links.get(gw_id, {}).get("graphs", {})
-    st_coords = igra_links.get(gw_id, {}).get("station_coords")
-
-    for _, row in group.sort_values("gwTime").iterrows():
-        try:
-            raw_date = pd.to_datetime(row["gwTime"])
-            readable_date = raw_date.strftime("%d %B %Y at %H:%M")
-            graph_key = raw_date.strftime("%Y-%m-%d")
-        except Exception:
-            readable_date = "Invalid date"
-            graph_key = None
-
-        rssi = row.get("rssi", "N/A")
-        snr = row.get("snr", "N/A")
-        info_html += f"<li><b>{readable_date}</b>: RSSI = {rssi}, SNR = {snr}"
-
-        if graph_key and graph_key in gw_graphs:
-            graph_path = gw_graphs[graph_key].replace("./", "")
-            info_html += f"""
-            <br><button onclick=\"openModalWithImage('{graph_path}')\">
-                See IGRA graph of this day
-            </button>
-            """
-
-        info_html += "</li>"
-    info_html += "</ul>"
-
-    # Injection JS et ajout sur la carte
+    if date in gw_graphs:
+        graph_path = gw_graphs[date].replace("./", "")
+        info_html += f"""
+        <br><button onclick=\"window.open('{graph_path}', '_blank', 'width=700,height=800')\">
+            See IGRA graph of this day
+        </button>
+        """
+    
     safe_html = escape_js(info_html)
-    full_js = f"showSidebar(`{safe_html}`);{js_call}"
-
+    full_js = f"showSidebar(`{safe_html}`);"
+    
+    # Créer les éléments et les ajouter au FeatureGroup de la date
     folium.CircleMarker(
         location=[lat, lon],
         radius=6,
@@ -161,23 +125,211 @@ for gw_id, group in grouped:
         fill=True,
         fill_color=color,
         fill_opacity=0.8,
-        tooltip=first["gateway_name"],
-        popup=folium.Popup("Click for more info", max_width=150),
-    ).add_to(m)
-
+        tooltip=f"{row['gateway_name']} - {date}",
+    ).add_to(date_groups[date])
+    
     folium.Marker(
         location=[lat, lon],
         icon=folium.DivIcon(html=f"""
             <div onclick=\"{full_js}\" style=\"width:12px;height:12px;border-radius:6px;background:{color};cursor:pointer;\"></div>
         """)
-    ).add_to(m)
-
+    ).add_to(date_groups[date])
+    
     folium.PolyLine(
         locations=[[lat, lon], map_center],
         color=color,
         weight=2,
         opacity=0.6
-    ).add_to(m)
+    ).add_to(date_groups[date])
+
+# === Contrôle des calques (à gauche) ===
+folium.LayerControl(collapsed=False, position='topleft').add_to(m)
+
+# === HTML pour panneau latéral (à droite) ===
+sidebar_html = """
+<div id="sidebar" style="
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    width: 300px;
+    height: 90%;
+    background-color: white;
+    z-index: 1000;
+    overflow-y: auto;
+    padding: 10px;
+    box-shadow: -2px 0 5px rgba(0,0,0,0.4);
+">
+    <button onclick="document.getElementById('sidebar').style.display='none'" 
+            style="float: right; margin-bottom: 10px; background: none; border: none; font-size: 18px; cursor: pointer;">×</button>
+    <h4>Gateway Information</h4>
+    <div id="info-content">
+        <p><i>Click on any gateway to view detailed information</i></p>
+        <p><small>You can close this panel with the [×] button</small></p>
+    </div>
+</div>
+"""
+m.get_root().html.add_child(folium.Element(sidebar_html))
+
+# === Timeline améliorée avec synchronisation des checkbox ===
+# === HTML pour la timeline améliorée (centrée en bas) ===
+timeline_html = f"""
+<div id="timeline-container" style="
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    min-width: 400px;
+    max-width: 800px;
+    background-color: rgba(255, 255, 255, 0.9);
+    z-index: 1000;
+    padding: 15px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-radius: 10px;
+    border: 1px solid #ddd;
+">
+    <h4 style="margin: 0 0 10px 0; text-align: center; color: #333;">Select a date</h4>
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+        <button id="prevDate" style="
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+        ">&lt; Previous</button>
+        
+        <input type="range" id="dateSlider" min="0" max="{len(all_dates)-1}" value="0" step="1" 
+               style="
+                   flex-grow: 1;
+                   height: 8px;
+                   border-radius: 4px;
+                   background: #e0e0e0;
+                   outline: none;
+                   -webkit-appearance: none;
+               ">
+        
+        <button id="nextDate" style="
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+        ">Next &gt;</button>
+    </div>
+    <div id="currentDate" style="
+        text-align: center;
+        font-weight: bold;
+        font-size: 16px;
+        color: #2c3e50;
+        padding: 5px;
+        background: #f8f9fa;
+        border-radius: 5px;
+        margin-top: 5px;
+    ">{all_dates[0] if all_dates else "No dates available"}</div>
+</div>
+
+<style>
+    /* Style amélioré pour le slider */
+    #dateSlider::-webkit-slider-thumb {{
+        -webkit-appearance: none;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #3498db;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }}
+    
+    #dateSlider::-moz-range-thumb {{
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #3498db;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }}
+    
+    #dateSlider::-webkit-slider-runnable-track {{
+        height: 8px;
+        background: #e0e0e0;
+        border-radius: 4px;
+    }}
+    
+    #dateSlider::-moz-range-track {{
+        height: 8px;
+        background: #e0e0e0;
+        border-radius: 4px;
+    }}
+</style>
+"""
+m.get_root().html.add_child(folium.Element(timeline_html))
+
+
+# === Script JS qui force la synchronisation ===
+script = f"""
+<script>
+// Stocker les dates disponibles
+const allDates = {json.dumps(all_dates)};
+let currentDateIndex = 0;
+
+// Fonction pour afficher le panneau latéral
+function showSidebar(content) {{
+    const sidebar = document.getElementById("sidebar");
+    document.getElementById("info-content").innerHTML = content;
+    sidebar.style.display = "block"; // S'assure qu'il reste visible
+}}
+
+// Fermer le panneau si on clique sur le bouton X
+document.addEventListener("DOMContentLoaded", function() {{
+    document.getElementById("sidebar").style.display = "block"; // Visible par défaut
+}});
+
+// Fonction pour forcer le changement de layer
+function changeDate(dateIndex) {{
+    currentDateIndex = dateIndex;
+    const selectedDate = allDates[dateIndex];
+    document.getElementById("currentDate").textContent = selectedDate;
+    document.getElementById("dateSlider").value = dateIndex;
+    
+    // Trouver toutes les checkbox de layer
+    const checkboxes = document.querySelectorAll('input.leaflet-control-layers-selector');
+    
+    // Décocher toutes les checkbox sauf celle correspondante
+    checkboxes.forEach((checkbox, index) => {{
+        if (index === dateIndex + 1) {{ // +1 car la première checkbox est pour le fond de carte
+            if (!checkbox.checked) {{
+                checkbox.click(); // Simuler un clic pour activer
+            }}
+        }} else {{
+            if (checkbox.checked) {{
+                checkbox.click(); // Simuler un clic pour désactiver
+            }}
+        }}
+    }});
+}}
+
+// Initialisation après le chargement
+document.addEventListener("DOMContentLoaded", function() {{
+    // Gestion des boutons et slider
+    document.getElementById("prevDate").addEventListener("click", function() {{
+        changeDate(Math.max(0, currentDateIndex - 1));
+    }});
+    
+    document.getElementById("nextDate").addEventListener("click", function() {{
+        changeDate(Math.min(allDates.length - 1, currentDateIndex + 1));
+    }});
+    
+    document.getElementById("dateSlider").addEventListener("input", function() {{
+        changeDate(parseInt(this.value));
+    }});
+    
+    // Activer la première date par défaut
+    setTimeout(() => {{ changeDate(0); }}, 500); // Petit délai pour être sûr que les layers sont chargés
+}});
+</script>
+"""
+m.get_root().header.add_child(folium.Element(script))
+
 
 # === Sauvegarde finale ===
 m.save(OUTPUT_MAP)
