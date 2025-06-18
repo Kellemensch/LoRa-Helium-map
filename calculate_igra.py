@@ -194,6 +194,7 @@ def main(test_index=None):
         date = row["gwTime"]
         gw_name = row["gateway_name"]
         gw_id = row["gatewayId"]
+        visibility = row["visibility"]
         output_image = f"{LOCAL_DIR}gradient_{gw_name}_{date.strftime('%Y-%m-%d')}.png"
 
 
@@ -239,7 +240,10 @@ def main(test_index=None):
 
             # Ajouter le graphe du jour à "graphs"
             date_key = pd.to_datetime(date).strftime("%Y-%m-%d")
-            json_output[gw_id]["graphs"][date_key] = output_image
+
+            # Seulement si la gateway est en NLOS car plus intéressant
+            if visibility == "NLOS":
+                json_output[gw_id]["graphs"][date_key] = output_image
 
 
             log("Results found and saved in json")
