@@ -7,9 +7,9 @@ from datetime import datetime
 from configs.config_coords import END_DEVICE_LAT, END_DEVICE_LON
 
 # === Paramètres ===
-LOS_CSV = "data/helium_gateway_data.csv"
-IGRA_LINKS_JSON = "igra-datas/map_links.json"
-OUTPUT_MAP = "map2.html"
+LOS_CSV = "/app/output/data/helium_gateway_data.csv"
+IGRA_LINKS_JSON = "/app/output/igra-datas/map_links.json"
+OUTPUT_MAP = "/app/output/map.html"
 
 # === Argument ligne de commande ===
 parser = argparse.ArgumentParser()
@@ -169,6 +169,33 @@ sidebar_html = """
 </div>
 """
 m.get_root().html.add_child(folium.Element(sidebar_html))
+
+# HTML de la légende
+legend_html = '''
+    <div style="
+    position: fixed; 
+    bottom: 30px; left: 30px;
+    max-height: 200px;
+    width: 250px;
+    overflow-y: auto;
+    background-color: white;
+    border:2px solid grey;
+    z-index:9999;
+    font-size:14px;
+    border-radius:8px;
+    box-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+    padding: 10px;
+    line-height: 1.5;
+">
+    <b>Legend</b><br>
+    <i class="fa fa-info-circle fa-lg" style="color:deepskyblue;"></i> End Node<br>
+    <svg width="12" height="12"><circle cx="6" cy="6" r="6" fill="blue" /></svg> In Line-Of-Sight (LOS) LoRaWan Gateway<br>
+    <svg width="12" height="12"><circle cx="6" cy="6" r="6" fill="red" /></svg> Not in Line-Of-Sight (NLOS) LoRaWan Gateway<br>
+    <svg width="12" height="12"><circle cx="6" cy="6" r="6" fill="grey" /></svg> LoRaWan Gateway not receiving the end-node 
+    </div>
+    '''
+
+m.get_root().html.add_child(folium.Element(legend_html))
 
 # === Timeline améliorée avec synchronisation des checkbox ===
 # === HTML pour la timeline améliorée (centrée en bas) ===
