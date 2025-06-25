@@ -35,6 +35,7 @@ docker pull "$IMAGE_NAME"
 
 docker run -d --rm \
   -p 5000:5000 \
+  -v "$(pwd)/configs:/app/configs"
   -v "$(pwd)/output:/app/output" \
   -e HOST_UID=$UID_LOCAL \
   -e HOST_GID=$GID_LOCAL \
