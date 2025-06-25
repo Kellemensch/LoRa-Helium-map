@@ -2,7 +2,7 @@ FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Installer tout ce qu'il faut dans l'image
+# Installer dépendances dans l'image
 RUN apt-get update && apt-get install -y \
     python3 python3-pip python3-venv \
     build-essential gfortran libpng-dev wget unzip g++ libbz2-dev zlib1g-dev xvfb\
@@ -19,7 +19,6 @@ RUN mkdir -p /usr/src/splat && cd /usr/src/splat && \
 
 ENV PATH="/usr/src/splat/splat-1.4.2:${PATH}"
 
-# Définir le dossier de travail
 WORKDIR /app
 
 # Copier le code du projet

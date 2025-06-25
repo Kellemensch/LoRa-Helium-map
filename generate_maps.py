@@ -189,9 +189,10 @@ legend_html = '''
 ">
     <b>Legend</b><br>
     <i class="fa fa-info-circle fa-lg" style="color:deepskyblue;"></i> End Node<br>
-    <svg width="12" height="12"><circle cx="6" cy="6" r="6" fill="blue" /></svg> In Line-Of-Sight (LOS) LoRaWan Gateway<br>
+    <svg width="12" height="12"><circle cx="6" cy="6" r="6" fill="green" /></svg> In Line-Of-Sight (LOS) LoRaWan Gateway<br>
     <svg width="12" height="12"><circle cx="6" cy="6" r="6" fill="red" /></svg> Not in Line-Of-Sight (NLOS) LoRaWan Gateway<br>
-    <svg width="12" height="12"><circle cx="6" cy="6" r="6" fill="grey" /></svg> LoRaWan Gateway not receiving the end-node 
+    <svg width="12" height="12"><circle cx="6" cy="6" r="6" fill="grey" /></svg> LoRaWan Gateway not receiving the end-node<br>
+    <svg width="12" height="12"><circle cx="6" cy="6" r="6" fill="purple" /></svg> <a href="https://www.ncei.noaa.gov/products/weather-balloon/integrated-global-radiosonde-archive">IGRA</a> radiosonde station
     </div>
     '''
 

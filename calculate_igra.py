@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import argparse
 import json
 import glob
+import requests
 from configs.config_coords import END_DEVICE_LAT, END_DEVICE_LON
 
 CURRENT_YEAR = datetime.datetime.now().year
@@ -18,6 +19,7 @@ INPUT_CSV = "/app/output/data/helium_gateway_data.csv"
 OUTPUT_CSV = "/app/output/igra-datas/weather-data.csv"
 STATIONS_FILE = "/app/output/igra-datas/igra2-station-list.txt"
 OUTPUT_JSON = "/app/output/igra-datas/map_links.json"
+CACHE_FILE = "/app/output/ollama_cache.json"
 
 EARTH_RADIUS = 6371.0
 
@@ -159,19 +161,111 @@ def plot_gradients(gradients, output_file, title_date, gateway_name, station_id)
     heights = [h for h, _ in gradients]
     dn_dh = [v for _, v in gradients]
 
-    plt.figure(figsize=(6, 8))
-    plt.plot(dn_dh, heights, label='dN/dh (km-1)', color='blue')
-    plt.axvline(-157, color='red', linestyle='--', label='Ducting threshold (-157 km-1)')
-    plt.gca().invert_yaxis()
-    plt.xlabel('Refractivity gradient (km-1)')
-    plt.ylabel('Height (m)')
-    plt.title(f'Refractivity gradient of {gateway_name} – {title_date} (Station {station_id})', wrap=True)
-    plt.grid(True)
-    plt.legend()
+    # Appel à l'IA locale (Ollama)
+    zones = detect_duct_zones(gradients)
+    prompt = generate_prompt_from_zones(zones)
+    description = call_ollama(station_id, title_date, prompt).strip()
+
+    # Créer la figure avec 2 zones : graphe + texte
+    fig, axs = plt.subplots(2, 1, figsize=(6, 10), gridspec_kw={'height_ratios': [3, 1]})
+
+    # Partie haute : le graphe
+    axs[0].plot(dn_dh, heights, label='dN/dh (km⁻¹)', color='blue')
+    axs[0].axvline(-157, color='red', linestyle='--', label='Ducting threshold (-157 km⁻¹)')
+    axs[0].invert_yaxis()
+    axs[0].set_xlabel('Refractivity gradient (km⁻¹)')
+    axs[0].set_ylabel('Height (m)')
+    axs[0].set_title(f'Refractivity gradient of {gateway_name} – {title_date} (Station {station_id})', wrap=True)
+    axs[0].grid(True)
+    axs[0].legend()
+
+    # Partie basse : le texte généré
+    axs[1].axis('off')
+    # axs[1].text(0.01, 0.9, "IA's analysis :", fontsize=10, fontweight='bold', transform=axs[1].transAxes)
+    axs[1].text(0.01, 0.7, description, fontsize=9, wrap=True, transform=axs[1].transAxes)
+
     plt.tight_layout()
-    plt.savefig(output_file)
+    plt.savefig(output_file, dpi=300)
     plt.close()
-    log(f"Graph saved in {output_file}")
+    log(f"Graph with analysis saved in {output_file}")
+
+
+def load_cache():
+    if os.path.exists(CACHE_FILE):
+        with open(CACHE_FILE, "r") as f:
+            return json.load(f)
+    else:
+        log("[CACHE] No cache file found")
+    
+    return {}
+
+def save_cache(cache):
+    try:
+        with open(CACHE_FILE, "w") as f:
+            json.dump(cache, f, indent=2)
+        log(f"[CACHE] Saved {len(cache)} entries to {CACHE_FILE}")
+    except Exception as e:
+        log(f"[CACHE ERROR] Failed to save cache: {str(e)}")
+
+
+def detect_duct_zones(gradients, threshold=-157):
+    duct_zones = []
+    for i, (h, g) in enumerate(gradients[1:], start=1):
+        if g < threshold:
+            h_start = gradients[i - 1][0]
+            h_end = gradients[i][0]
+            duct_zones.append((h_start, h_end, g))
+    return duct_zones
+
+def generate_prompt_from_zones(zones):
+    if not zones:
+        return None
+    desc = ( "You are a specialist in tropospheric radio propagation and LoRaWAN communication. "
+    "The following vertical layers exhibit tropospheric ducting conditions:\n"
+    )
+    for h_start, h_end, g in zones:
+        desc += f"- From {int(h_start)} m to {int(h_end)} m : gradient = {g:.1f} N/km\n"
+    desc += (
+        "\nWrite a concise, scientific summary explaining what these ducting zones imply for radio wave propagation. "
+        "Avoid conversational tone or general pleasantries. Focus on technical interpretation."
+    )
+    return desc
+
+def call_ollama(station_id, title_date, prompt, model="llama3", timeout=90):
+    cache = load_cache()
+    key = f"{station_id}_{title_date}"
+
+    if key in cache:
+        log(f"[CACHE HIT] {key}")
+        return cache[key]
+    
+    if not prompt:
+        cache[key] = "No tropospheric duct detected : dN/dh > -157 N/km all the way"
+        save_cache(cache)
+        return cache[key]
+        
+    
+    log("Calling AI...")
+
+    try:
+        result = subprocess.run(
+            ["ollama", "run", model],
+            input=prompt.encode(),
+            capture_output=True,
+            timeout=timeout
+        )
+
+        response_text = result.stdout.decode().strip()
+        if response_text:
+            cache[key] = response_text
+            save_cache(cache)
+            return response_text
+        else:
+            return "[Empty response from Ollama]"
+    except subprocess.TimeoutExpired:
+        return "[Call to Ollama timed out]"
+    except Exception as e:
+        return f"[Error calling Ollama: {str(e)}]"
 
 
 
@@ -264,4 +358,4 @@ main()
 
 # Pour exécuter en mode test sur la ligne 0 :
 # if __name__ == "__main__":
-#     main(test_index=1)
+    # main(test_index=1)
