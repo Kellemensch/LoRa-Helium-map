@@ -8,7 +8,7 @@
 import csv
 import os
 import math
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 import argparse
 from configs.config_coords import END_DEVICE_LAT, END_DEVICE_LON
 
@@ -115,6 +115,15 @@ def helium_webhook():
     except Exception as e:
         log("Errore:", e)
         return jsonify({"status": "error", "message": str(e)}), 500
+    
+@app.route('/map', methods=['GET'])
+def map_server():
+    try:
+        return send_from_directory('/app/output', 'map.html')
+    except FileNotFoundError:
+        return jsonify({"status": "error", "message": "Map file not found"}), 404
+
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
