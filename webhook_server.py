@@ -122,6 +122,10 @@ def map_server():
         return send_from_directory('/app/output', 'map.html')
     except FileNotFoundError:
         return jsonify({"status": "error", "message": "Map file not found"}), 404
+    
+@app.route('/app/output/igra-datas/derived/<path:filename>')
+def serve_images(filename):
+    return send_from_directory('/app/output/igra-datas/derived', filename)
 
 
 
