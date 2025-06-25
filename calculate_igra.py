@@ -162,9 +162,9 @@ def plot_gradients(gradients, output_file, title_date, gateway_name, station_id)
     dn_dh = [v for _, v in gradients]
 
     # Appel à l'IA locale (Ollama)
-    zones = detect_duct_zones(gradients)
-    prompt = generate_prompt_from_zones(zones)
-    description = call_ollama(station_id, title_date, prompt).strip()
+    # zones = detect_duct_zones(gradients)
+    # prompt = generate_prompt_from_zones(zones)
+    # description = call_ollama(station_id, title_date, prompt).strip()
 
     # Créer la figure avec 2 zones : graphe + texte
     fig, axs = plt.subplots(2, 1, figsize=(6, 10), gridspec_kw={'height_ratios': [3, 1]})
@@ -179,10 +179,10 @@ def plot_gradients(gradients, output_file, title_date, gateway_name, station_id)
     axs[0].grid(True)
     axs[0].legend()
 
-    # Partie basse : le texte généré
-    axs[1].axis('off')
-    # axs[1].text(0.01, 0.9, "IA's analysis :", fontsize=10, fontweight='bold', transform=axs[1].transAxes)
-    axs[1].text(0.01, 0.7, description, fontsize=9, wrap=True, transform=axs[1].transAxes)
+    # # Partie basse : le texte généré
+    # axs[1].axis('off')
+    # # axs[1].text(0.01, 0.9, "IA's analysis :", fontsize=10, fontweight='bold', transform=axs[1].transAxes)
+    # axs[1].text(0.01, 0.7, description, fontsize=9, wrap=True, transform=axs[1].transAxes)
 
     plt.tight_layout()
     plt.savefig(output_file, dpi=300)
