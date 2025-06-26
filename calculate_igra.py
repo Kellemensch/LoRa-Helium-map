@@ -163,8 +163,9 @@ def plot_gradients(gradients, output_file, title_date, gateway_name, station_id)
 
     # Appel à l'IA locale (Ollama)
     zones = detect_duct_zones(gradients)
-    prompt = generate_prompt_from_zones(zones)
-    description = call_ollama(station_id, title_date, prompt)
+    # prompt = generate_prompt_from_zones(zones)
+    # description = call_ollama(station_id, title_date, prompt)
+    description = describe_ducting_case(zones)
 
     # Créer la figure avec 2 zones : graphe + texte
     fig, axs = plt.subplots(2, 1, figsize=(6, 10), gridspec_kw={'height_ratios': [3, 1]})
@@ -216,6 +217,24 @@ def detect_duct_zones(gradients, threshold=-157):
             h_end = gradients[i][0]
             duct_zones.append((h_start, h_end, g))
     return duct_zones
+
+def describe_ducting_case(duct_zones):
+    if not duct_zones:
+        return "Standard atmospheric conditions — no ducting layer detected.\nSignal propagation is expected to follow normal line-of-sight or slightly refracted paths."
+
+    # Analyse des zones détectées
+    surface_based = any(h_start <= 100 for h_start, h_end, g in duct_zones)
+    elevated = any(h_start > 100 for h_start, h_end, g in duct_zones)
+
+    if surface_based and elevated:
+        return "Multiple ducting layers detected — both surface-based and elevated ducts are present.\nRadio signals may experience strong atmospheric trapping at multiple altitudes."
+    elif surface_based:
+        return "Surface-based duct detected — strong negative gradient near the ground.\nRadio signals may travel much farther than usual along the surface due to atmospheric trapping."
+    elif elevated:
+        return "Elevated duct layer identified — negative refractivity gradient above ground level.\nRadio signals may be trapped between atmospheric layers, enabling long-range propagation over the horizon."
+
+    # Cas de fallback si les conditions sont marginales (ce cas est rarement atteint ici, car la détection est déjà faite en amont)
+    return "Potential ducting conditions — negative refractivity gradient observed, but marginal.\nUnstable or transitional atmospheric layer may cause intermittent signal trapping."
 
 def generate_prompt_from_zones(zones):
     if not zones:
