@@ -1,10 +1,13 @@
-FROM ubuntu:22.04
+FROM alpine/ollama
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y curl git && \
-    curl -fsSL https://ollama.com/install.sh | sh
+WORKDIR /app
 
+RUN apk add --no-cache curl
+
+COPY ollama-entrypoint.sh /app/ollama-entrypoint.sh
+RUN chmod +x /app/ollama-entrypoint.sh
 
 # Exposer le port HTTP d’Ollama
 EXPOSE 11434
@@ -12,4 +15,4 @@ EXPOSE 11434
 # Dossier par défaut utilisé par Ollama pour les modèles
 VOLUME ["/root/.ollama"]
 
-ENTRYPOINT ["ollama-entrypoint.sh"]
+ENTRYPOINT ["/app/ollama-entrypoint.sh"]
