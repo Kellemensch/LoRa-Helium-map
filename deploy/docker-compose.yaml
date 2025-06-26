@@ -1,0 +1,35 @@
+services:
+  app:
+    image: kellemensch/lora-helium-map:latest
+    container_name: lora-map
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./configs:/app/configs
+      - ./output:/app/output
+    environment:
+      - OLLAMA_API_URL=http://ollama:11434
+    restart: unless-stopped
+
+  ollama:
+    image: kellemensch/ollama:latest
+    container_name: ollama-server
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    restart: unless-stopped
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=300  # toutes les 5 minutes
+    restart: unless-stopped
+
+
+volumes:
+  ollama_models:

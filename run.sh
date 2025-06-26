@@ -1,8 +1,5 @@
 #!/bin/bash
 
-IMAGE_NAME="kellemensch/lora-helium-map:latest"
-CONTAINER_NAME="lora-map"
-
 echo "🔧 Initializing configuration..."
 
 # Lire latitude et longitude s'ils ne sont pas déjà définis
@@ -28,21 +25,11 @@ else
   echo "✅ Subdomain already defined : $(cat configs/.subdomain)"
 fi
 
-UID_LOCAL=$(id -u)
-GID_LOCAL=$(id -g)
+echo "Starting containers with docker-compose..."
 
-docker pull "$IMAGE_NAME"
+docker compose build
+docker compose up -d
 
-docker run -d --rm \
-  -p 5000:5000 \
-  -v "$(pwd)/configs:/app/configs"
-  -v "$(pwd)/output:/app/output" \
-  -e HOST_UID=$UID_LOCAL \
-  -e HOST_GID=$GID_LOCAL \
-  --dns 8.8.8.8 \
-  --name "$CONTAINER_NAME" \
-  "$IMAGE_NAME"
-
-echo "Logs can be seen with : docker logs -f $CONTAINER_NAME"
-echo "🛑 Stop with : docker stop $CONTAINER_NAME"
-echo "The output map is in output/map.html"
+echo "Logs for app: docker logs -f lora-map"
+echo "Logs for ollama: docker logs -f ollama-server"
+echo "Stop everything with: docker compose down"

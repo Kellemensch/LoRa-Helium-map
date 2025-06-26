@@ -162,9 +162,9 @@ def plot_gradients(gradients, output_file, title_date, gateway_name, station_id)
     dn_dh = [v for _, v in gradients]
 
     # Appel à l'IA locale (Ollama)
-    # zones = detect_duct_zones(gradients)
-    # prompt = generate_prompt_from_zones(zones)
-    # description = call_ollama(station_id, title_date, prompt).strip()
+    zones = detect_duct_zones(gradients)
+    prompt = generate_prompt_from_zones(zones)
+    description = call_ollama(station_id, title_date, prompt)
 
     # Créer la figure avec 2 zones : graphe + texte
     fig, axs = plt.subplots(2, 1, figsize=(6, 10), gridspec_kw={'height_ratios': [3, 1]})
@@ -179,10 +179,10 @@ def plot_gradients(gradients, output_file, title_date, gateway_name, station_id)
     axs[0].grid(True)
     axs[0].legend()
 
-    # # Partie basse : le texte généré
-    # axs[1].axis('off')
-    # # axs[1].text(0.01, 0.9, "IA's analysis :", fontsize=10, fontweight='bold', transform=axs[1].transAxes)
-    # axs[1].text(0.01, 0.7, description, fontsize=9, wrap=True, transform=axs[1].transAxes)
+    # Partie basse : le texte généré
+    axs[1].axis('off')
+    # axs[1].text(0.01, 0.9, "IA's analysis :", fontsize=10, fontweight='bold', transform=axs[1].transAxes)
+    axs[1].text(0.01, 0.7, description, fontsize=9, wrap=True, transform=axs[1].transAxes)
 
     plt.tight_layout()
     plt.savefig(output_file, dpi=300)
@@ -231,7 +231,7 @@ def generate_prompt_from_zones(zones):
     )
     return desc
 
-def call_ollama(station_id, title_date, prompt, model="llama3", timeout=90):
+def call_ollama(station_id, title_date, prompt, model="llama3"):
     cache = load_cache()
     key = f"{station_id}_{title_date}"
 
@@ -245,17 +245,16 @@ def call_ollama(station_id, title_date, prompt, model="llama3", timeout=90):
         return cache[key]
         
     
-    log("Calling AI...")
+    log("Calling Ollama HTTP API...")
 
     try:
-        result = subprocess.run(
-            ["ollama", "run", model],
-            input=prompt.encode(),
-            capture_output=True,
-            timeout=timeout
+        url = os.environ.get("OLLAMA_API_URL", "http://localhost:11434")
+        r = requests.post(
+            f"{url}/api/generate",
+            json={"model": model, "prompt": prompt, "stream": False}
         )
 
-        response_text = result.stdout.decode().strip()
+        response_text = r.json().get("response", "").strip()
         if response_text:
             cache[key] = response_text
             save_cache(cache)
