@@ -22,7 +22,7 @@ ENV PATH="/usr/src/splat/splat-1.4.2:${PATH}"
 
 WORKDIR /app
 
-COPY . /app
+COPY requirements.txt /app/requirements.txt
 
 RUN python3 -m venv venv && \
     . venv/bin/activate && \
@@ -30,10 +30,6 @@ RUN python3 -m venv venv && \
     pip install -r requirements.txt && \
     pip cache purge
 
-
-# Donner les permissions d’exécution aux scripts
-RUN chmod +x docker-entrypoint.sh
-
 EXPOSE 5000
 
-ENTRYPOINT ["./docker-entrypoint.sh"]
+CMD ["sleep", "infinity"]

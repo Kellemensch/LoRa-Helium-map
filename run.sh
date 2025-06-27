@@ -27,7 +27,11 @@ fi
 
 echo "Starting containers with docker-compose..."
 
-docker compose build
+# Pour que le dossier output soit non root
+export LOCAL_UID=$(id -u)
+export LOCAL_GID=$(id -g)
+
+docker compose pull
 docker compose up -d
 
 echo "Logs for app: docker logs -f lora-map"
