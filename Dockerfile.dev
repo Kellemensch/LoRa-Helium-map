@@ -1,0 +1,11 @@
+FROM lora-helium-map:base 
+
+WORKDIR /app
+
+COPY . /app
+
+# Donner les permissions d’exécution aux scripts
+RUN chmod +x docker-entrypoint.sh
+
+
+ENTRYPOINT ["./docker-entrypoint.sh"]

@@ -1,24 +1,21 @@
 services:
   app:
+    build:
+      context: .
+      args:
+        USER_ID: ${LOCAL_UID}
+        GROUP_ID: ${LOCAL_GID}
     image: kellemensch/lora-helium-map:latest
     container_name: lora-map
+    user: "${LOCAL_UID}:${LOCAL_GID}"
     ports:
       - "5000:5000"
     volumes:
-      - ./configs:/app/configs
       - ./output:/app/output
-    environment:
-      - OLLAMA_API_URL=http://ollama:11434
+      - ./configs:/app/configs
     restart: unless-stopped
 
-  ollama:
-    image: kellemensch/ollama:latest
-    container_name: ollama-server
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_models:/root/.ollama
-    restart: unless-stopped
+
 
   watchtower:
     image: containrrr/watchtower
@@ -27,9 +24,5 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - WATCHTOWER_CLEANUP=true
-      - WATCHTOWER_POLL_INTERVAL=300  # toutes les 5 minutes
+      - WATCHTOWER_POLL_INTERVAL=18000  # toutes les 5 heures
     restart: unless-stopped
-
-
-volumes:
-  ollama_models:

@@ -83,41 +83,44 @@ for date in all_dates:
     date_groups[date].add_to(m)
 
 # === Affichage des gateways ===
-for _, row in df.iterrows():
-    date = row['date']
+# Grouper toutes les mesures par gatewayId + date
+grouped = df.groupby(["gatewayId", "date"])
+
+for (gw_id, date), group in grouped:
+    row = group.iloc[0]  # Pour l'emplacement et les infos statiques
     color = "green" if row["visibility"] == "LOS" else "red"
     lat = round(row["gateway_lat"], 5)
     lon = round(row["gateway_long"], 5)
-    
-    # Info HTML pour le panneau latéral
+
+    # Construction HTML avec toutes les mesures
     info_html = f"""
     <b>Gateway Name:</b> {row['gateway_name']}<br>
-    <b>Gateway ID:</b> {row['gatewayId']}<br>
+    <b>Gateway ID:</b> {gw_id}<br>
     <b>Latitude:</b> {lat}<br>
     <b>Longitude:</b> {lon}<br>
-    <b>Distance:</b> {round(row['dist_km'], 2)} km<br>
     <b>Visibility:</b> {row['visibility']}<br>
-    <hr><b>Measurement:</b><br>
-    <b>Date:</b> {pd.to_datetime(row['gwTime']).strftime('%d %B %Y at %H:%M')}<br>
-    <b>RSSI:</b> {row.get('rssi', 'N/A')}<br>
-    <b>SNR:</b> {row.get('snr', 'N/A')}<br>
+    <hr><b>Measurements for {date}:</b><br>
     """
-    
-    # Ajouter le graph IGRA si disponible
-    gw_id = row['gatewayId']
-    gw_graphs = igra_links.get(gw_id, {}).get("graphs", {})
-    if date in gw_graphs:
-        graph_path = gw_graphs[date].replace("./", "")
+
+    for _, r in group.iterrows():
+        info_html += f"""
+        <b>- {pd.to_datetime(r['gwTime']).strftime('%H:%M')} :</b> RSSI={r.get('rssi', 'N/A')}, SNR={r.get('snr', 'N/A')}<br>
+        """
+
+    # Ajout du graphe IGRA s'il existe
+    graph_path = igra_links.get(gw_id, {}).get("graphs", {}).get(date)
+    if graph_path:
+        graph_path = graph_path.replace("./", "")
         info_html += f"""
         <br><button onclick=\"window.open('{graph_path}', '_blank', 'width=700,height=800')\">
             See IGRA graph of this day
         </button>
         """
-    
+
     safe_html = escape_js(info_html)
     full_js = f"showSidebar(`{safe_html}`);"
-    
-    # Créer les éléments et les ajouter au FeatureGroup de la date
+
+    # Marqueurs + interaction
     folium.CircleMarker(
         location=[lat, lon],
         radius=6,
@@ -127,20 +130,21 @@ for _, row in df.iterrows():
         fill_opacity=0.8,
         tooltip=f"{row['gateway_name']} - {date}",
     ).add_to(date_groups[date])
-    
+
     folium.Marker(
         location=[lat, lon],
         icon=folium.DivIcon(html=f"""
             <div onclick=\"{full_js}\" style=\"width:12px;height:12px;border-radius:6px;background:{color};cursor:pointer;\"></div>
         """)
     ).add_to(date_groups[date])
-    
+
     folium.PolyLine(
         locations=[[lat, lon], map_center],
         color=color,
         weight=2,
         opacity=0.6
     ).add_to(date_groups[date])
+
 
 # === Contrôle des calques (à gauche) ===
 folium.LayerControl(collapsed=False, position='topleft').add_to(m)
