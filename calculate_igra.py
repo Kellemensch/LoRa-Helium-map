@@ -264,7 +264,7 @@ def main(test_index=None):
 
 
         # Clé d'unicité : nom de la gateway et date (pas heure)
-        key = (gw_name, date.date())
+        key = (gw_name, date.date().isoformat())
 
         if key in already_processed or os.path.exists(output_image):
             log(f"Already processed : {key}")

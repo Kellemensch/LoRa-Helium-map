@@ -66,7 +66,7 @@ def run_splat(tx_qth, rx_qth, output_png, output_txt):
         stderr=subprocess.PIPE,
         text=True
     )
-    log(result.stdout)
+    # log(result.stdout)
     if result.returncode != 0:
         log(f"SPLAT error:\n{result.stderr}")
         return 0

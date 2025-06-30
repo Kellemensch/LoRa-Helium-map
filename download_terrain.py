@@ -6,10 +6,10 @@ import time
 from configs.config_coords import END_DEVICE_LAT, END_DEVICE_LON
 
 # === CONFIGURATION UTILISATEUR ===
-RADIUS_DEG = 2  # Rayon en degrés autour du point
+RADIUS_DEG = 3  # Rayon en degrés autour du point
 
 # === CONSTANTES ===
-BASE_URL = "https://web.archive.org/web/20200518181904/https://dds.cr.usgs.gov/srtm/version2_1/SRTM3"
+BASE_URL = "https://srtm.kurviger.de/SRTM3"
 DOWNLOAD_DIR = "/app/srtm_hgt_files"
 UNZIP_DIR = "/app/maps"
 
@@ -76,6 +76,7 @@ def get_tiles_around(lat, lon, radius=1):
 
 # === SCRIPT PRINCIPAL ===
 if __name__ == "__main__":
+    print("Downloading terrain data for good use of Splat! tool...")
     os.makedirs(DOWNLOAD_DIR, exist_ok=True)
     os.makedirs(UNZIP_DIR, exist_ok=True)
 
@@ -90,5 +91,5 @@ if __name__ == "__main__":
 
         if download_file(url, zip_path, base_name):
             unzip_file(zip_path, UNZIP_DIR)
-            print("Waiting 5s to respect Web Archive quota, please wait...")
-            time.sleep(5)  # 5 secondes de pause pour éviter les blocages
+            # print("Waiting 5s to respect Web Archive quota, please wait...")
+            # time.sleep(5)  # 5 secondes de pause pour éviter les blocages
