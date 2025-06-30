@@ -7,6 +7,7 @@ deploy/
 examples/
 igra-datas/
 splat-runs/
+maps/
 
 *.md
 *.csv
@@ -19,6 +20,8 @@ configs/.latitude
 configs/.longitude
 configs/.subdomain
 configs/__pycache__/
+unzipped_hgt_files/
+srtm_hgt_files/
 
 .vscode/
 .idea/

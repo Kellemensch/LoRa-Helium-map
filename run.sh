@@ -1,20 +1,20 @@
 #!/bin/bash
 
-echo "🔧 Initializing configuration..."
+echo "Initializing configuration..."
 
 # Lire latitude et longitude s'ils ne sont pas déjà définis
 if [ ! -f configs/.latitude ]; then
   read -p "Latitude of the end-node (ex: 45.70377): " latitude
   echo "$latitude" > configs/.latitude
 else
-  echo "✅ Latitude already defined : $(cat configs/.latitude)"
+  echo "Latitude already defined : $(cat configs/.latitude)"
 fi
 
 if [ ! -f configs/.longitude ]; then
   read -p "Longitude of the end-node (ex: 13.7204): " longitude
   echo "$longitude" > configs/.longitude
 else
-  echo "✅ Longitude already defined : $(cat configs/.longitude)"
+  echo "Longitude already defined : $(cat configs/.longitude)"
 fi
 
 # Lire le subdomain si absent
@@ -22,7 +22,7 @@ if [ ! -f configs/.subdomain ]; then
   read -p "Subdomain name for localtunnel : " subdomain
   echo "$subdomain" > configs/.subdomain
 else
-  echo "✅ Subdomain already defined : $(cat configs/.subdomain)"
+  echo "Subdomain already defined : $(cat configs/.subdomain)"
 fi
 
 echo "Starting containers with docker-compose..."
@@ -37,3 +37,5 @@ docker compose up -d
 echo "Logs for app: docker logs -f lora-map"
 echo "Logs for ollama: docker logs -f ollama-server"
 echo "Stop everything with: docker compose down"
+echo "The map is available on :"
+echo "    http://$subdomain.loca.lt/map"

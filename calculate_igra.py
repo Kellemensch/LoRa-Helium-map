@@ -19,7 +19,7 @@ INPUT_CSV = "/app/output/data/helium_gateway_data.csv"
 OUTPUT_CSV = "/app/output/igra-datas/weather-data.csv"
 STATIONS_FILE = "/app/output/igra-datas/igra2-station-list.txt"
 OUTPUT_JSON = "/app/output/igra-datas/map_links.json"
-CACHE_FILE = "/app/output/ollama_cache.json"
+GRADIENT_CACHE_FILE = "/app/output/processed_gradients.json"
 
 EARTH_RADIUS = 6371.0
 
@@ -36,6 +36,25 @@ os.makedirs(LOCAL_DIR, exist_ok=True)
 for file in glob.glob(f"{LOCAL_DIR}*"):
     os.remove(file)
 log("Removed all old files")
+
+def load_processed_gradients():
+    if os.path.exists(GRADIENT_CACHE_FILE):
+        try:
+            with open(GRADIENT_CACHE_FILE, "r") as f:
+                data = json.load(f)
+                return set(tuple(item) for item in data)
+        except Exception as e:
+            log(f"[CACHE ERROR] Could not load gradient cache: {str(e)}")
+    return set()
+
+def save_processed_gradients(cache):
+    try:
+        with open(GRADIENT_CACHE_FILE, "w") as f:
+            json.dump([list(item) for item in cache], f, indent=2)
+        log(f"[CACHE] Saved {len(cache)} processed gradients")
+    except Exception as e:
+        log(f"[CACHE ERROR] Could not save gradient cache: {str(e)}")
+
 
 def get_stations():
     # Télécharge le fichier des stations
@@ -191,23 +210,6 @@ def plot_gradients(gradients, output_file, title_date, gateway_name, station_id)
     log(f"Graph with analysis saved in {output_file}")
 
 
-def load_cache():
-    if os.path.exists(CACHE_FILE):
-        with open(CACHE_FILE, "r") as f:
-            return json.load(f)
-    else:
-        log("[CACHE] No cache file found")
-    
-    return {}
-
-def save_cache(cache):
-    try:
-        with open(CACHE_FILE, "w") as f:
-            json.dump(cache, f, indent=2)
-        log(f"[CACHE] Saved {len(cache)} entries to {CACHE_FILE}")
-    except Exception as e:
-        log(f"[CACHE ERROR] Failed to save cache: {str(e)}")
-
 
 def detect_duct_zones(gradients, threshold=-157):
     duct_zones = []
@@ -236,55 +238,6 @@ def describe_ducting_case(duct_zones):
     # Cas de fallback si les conditions sont marginales (ce cas est rarement atteint ici, car la détection est déjà faite en amont)
     return "Potential ducting conditions — negative refractivity gradient observed, but marginal.\nUnstable or transitional atmospheric layer may cause intermittent signal trapping."
 
-def generate_prompt_from_zones(zones):
-    if not zones:
-        return None
-    desc = ( "You are a specialist in tropospheric radio propagation and LoRaWAN communication. "
-    "The following vertical layers exhibit tropospheric ducting conditions:\n"
-    )
-    for h_start, h_end, g in zones:
-        desc += f"- From {int(h_start)} m to {int(h_end)} m : gradient = {g:.1f} N/km\n"
-    desc += (
-        "\nWrite a concise, scientific summary explaining what these ducting zones imply for radio wave propagation. "
-        "Avoid conversational tone or general pleasantries. Focus on technical interpretation."
-    )
-    return desc
-
-def call_ollama(station_id, title_date, prompt, model="llama3"):
-    cache = load_cache()
-    key = f"{station_id}_{title_date}"
-
-    if key in cache:
-        log(f"[CACHE HIT] {key}")
-        return cache[key]
-    
-    if not prompt:
-        cache[key] = "No tropospheric duct detected : dN/dh > -157 N/km all the way"
-        save_cache(cache)
-        return cache[key]
-        
-    
-    log("Calling Ollama HTTP API...")
-
-    try:
-        url = os.environ.get("OLLAMA_API_URL", "http://localhost:11434")
-        r = requests.post(
-            f"{url}/api/generate",
-            json={"model": model, "prompt": prompt, "stream": False}
-        )
-
-        response_text = r.json().get("response", "").strip()
-        if response_text:
-            cache[key] = response_text
-            save_cache(cache)
-            return response_text
-        else:
-            return "[Empty response from Ollama]"
-    except subprocess.TimeoutExpired:
-        return "[Call to Ollama timed out]"
-    except Exception as e:
-        return f"[Error calling Ollama: {str(e)}]"
-
 
 
 def main(test_index=None):
@@ -297,7 +250,7 @@ def main(test_index=None):
     if test_index is not None:
         df = df.iloc[[test_index]]
 
-    already_processed = set()
+    already_processed = load_processed_gradients()
     json_output = {}
 
     for _, row in df.iterrows():
@@ -367,6 +320,9 @@ def main(test_index=None):
     if json_output:
         with open(OUTPUT_JSON, "w") as f:
             json.dump(json_output, f, indent=4)
+
+    save_processed_gradients(already_processed)
+    log(f"Cache file saved in {GRADIENT_CACHE_FILE}")
 
     print(f"IGRA graphs saved in {LOCAL_DIR}")
     log(f"Link file saved to {OUTPUT_JSON}")    

@@ -11,6 +11,8 @@ WEBHOOK = "webhook_server.py"
 SPLAT = "run_splat.py"
 MAP_GENERATION = "generate_maps.py"
 IGRA = "calculate_igra.py"
+DOWNLOAD_TERRAIN = "download_terrain.py"
+CONVERT_HGT = "convert_hgt_to_sdf.sh"
 
 # Définir l'argument --logs
 parser = argparse.ArgumentParser(description="Logs option")
@@ -22,6 +24,7 @@ with open("configs/.subdomain", "r") as f:
     subdomain = f.readline()
 
 def run_all():
+    run_terrain()
     if args.logs:
         p = subprocess.Popen(["bash", LOCALTUNNEL, subdomain, "--logs"])
     else:
@@ -37,6 +40,13 @@ def run_all():
     run_igra()
     run_map()
     
+def run_terrain():
+    p0 = subprocess.Popen(["python3", "-u", DOWNLOAD_TERRAIN])
+    subprocesses.append(p0)
+    p0.wait()
+    p00 = subprocess.Popen(["bash", "-u", CONVERT_HGT])
+    subprocesses.append(p00)
+    p00.wait()
 
 def run_map():
     print("(Re)running SPLAT calculation and map generation on new data...")
