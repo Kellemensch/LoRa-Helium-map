@@ -7,7 +7,6 @@ services:
         GROUP_ID: ${LOCAL_GID}
     image: kellemensch/lora-helium-map:latest
     container_name: lora-map
-    user: "${LOCAL_UID}:${LOCAL_GID}"
     ports:
       - "5000:5000"
     volumes:
@@ -24,5 +23,5 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - WATCHTOWER_CLEANUP=true
-      - WATCHTOWER_POLL_INTERVAL=18000  # toutes les 5 heures
+      - WATCHTOWER_POLL_INTERVAL=300  # toutes les 5 minutes
     restart: unless-stopped

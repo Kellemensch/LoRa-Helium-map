@@ -37,5 +37,3 @@ docker compose up -d
 echo "Logs for app: docker logs -f lora-map"
 echo "Logs for ollama: docker logs -f ollama-server"
 echo "Stop everything with: docker compose down"
-echo "The map is available on :"
-echo "    http://$subdomain.loca.lt/map"
