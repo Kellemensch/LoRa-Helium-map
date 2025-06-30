@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-pip python3-venv \
     build-essential gfortran libpng-dev wget unzip g++ \
-    libbz2-dev zlib1g-dev xvfb gnuplot nodejs npm curl tar bzip2 \
+    libbz2-dev zlib1g-dev xvfb gnuplot nodejs npm curl tar bzip2 gdal-bin \
  && npm install -g localtunnel \
  && rm -rf /var/lib/apt/lists/*
 
