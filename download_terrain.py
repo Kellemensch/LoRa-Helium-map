@@ -16,16 +16,22 @@ UNZIP_DIR = "/app/maps"
 # === FONCTIONS ===
 def guess_srtm_region():
     if -35 <= END_DEVICE_LAT <= 37 and -18 <= END_DEVICE_LON <= 52:
+        print("Guessed region : Africa")
         return "Africa"
     elif 0 <= END_DEVICE_LAT <= 83 and -10 <= END_DEVICE_LON <= 180:
+        print("Guessed region : Eurasia")
         return "Eurasia"
     elif 7 <= END_DEVICE_LAT <= 84 and -168 <= END_DEVICE_LON <= -52:
+        print("Guessed region : North America")
         return "North_America"
     elif -57 <= END_DEVICE_LAT <= 13 and -82 <= END_DEVICE_LON <= -34:
+        print("Guessed region : South America")
         return "South_America"
     elif -50 <= END_DEVICE_LAT <= -10 and 110 <= END_DEVICE_LON <= 180:
+        print("Guessed region : Australia")
         return "Australia"
     else:
+        print("Guessed region : Islands")
         return "Islands"  # par défaut
 
 def format_tile_name(lat, lon):

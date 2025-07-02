@@ -8,7 +8,7 @@
 import csv
 import os
 import math
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, send_file
 import argparse
 from configs.config_coords import END_DEVICE_LAT, END_DEVICE_LON
 
@@ -32,6 +32,8 @@ CSV_FILE = "/app/output/data/helium_gateway_data.csv"
 CSV_HEADER = ["gwTime", "gatewayId", "gateway_name", "gateway_id", 
               "node_long", "node_lat", "gateway_long", "gateway_lat", 
               "dist_km", "rssi", "snr", "visibility"]
+
+LOG_FILE = "/app/output/server.log"
 
 # ----------------------------------------------------------------------------
 # **POSIZIONE DEL NODO (Da impostare manualmente)**
@@ -126,6 +128,13 @@ def map_server():
 @app.route('/app/output/igra-datas/derived/<path:filename>')
 def serve_images(filename):
     return send_from_directory('/app/output/igra-datas/derived', filename)
+
+@app.route('/logs', methods=['GET'])
+def get_logs():
+    if os.path.exists(LOG_FILE):
+        return send_file(LOG_FILE, mimetype="text/plain", as_attachment=True)
+    else:
+        return "Log file not found", 404
 
 
 

@@ -33,27 +33,30 @@ def log(*messages):
 
 os.makedirs(LOCAL_DIR, exist_ok=True)
 # Supprime les anciens fichiers pour être sûr d'avoir les infos les plus récentes (png et données IGRA)
-for file in glob.glob(f"{LOCAL_DIR}*"):
+for file in glob.glob(f"{LOCAL_DIR}ITM*-drvd.txt"):
     os.remove(file)
-log("Removed all old files")
+log("Removed old IGRA data files")
+
 
 def load_processed_gradients():
     if os.path.exists(GRADIENT_CACHE_FILE):
         try:
             with open(GRADIENT_CACHE_FILE, "r") as f:
-                data = json.load(f)
-                return set(tuple(item) for item in data)
+                raw = json.load(f)
+                return {gw: set(dates) for gw, dates in raw.items()}
         except Exception as e:
             log(f"[CACHE ERROR] Could not load gradient cache: {str(e)}")
-    return set()
+    return {}
+
 
 def save_processed_gradients(cache):
     try:
         with open(GRADIENT_CACHE_FILE, "w") as f:
-            json.dump([list(item) for item in cache], f, indent=2)
-        log(f"[CACHE] Saved {len(cache)} processed gradients")
+            json.dump({gw: sorted(list(dates)) for gw, dates in cache.items()}, f, indent=2)
+        log(f"[CACHE] Saved processed gradients for {len(cache)} gateways")
     except Exception as e:
         log(f"[CACHE ERROR] Could not save gradient cache: {str(e)}")
+
 
 
 def get_stations():
@@ -222,21 +225,44 @@ def detect_duct_zones(gradients, threshold=-157):
 
 def describe_ducting_case(duct_zones):
     if not duct_zones:
-        return "Standard atmospheric conditions — no ducting layer detected.\nSignal propagation is expected to follow normal line-of-sight or slightly refracted paths."
+        return (
+            "Standard atmospheric conditions — no ducting layer detected.\n"
+            "Signal propagation is expected to follow normal line-of-sight or slightly refracted paths."
+        )
 
-    # Analyse des zones détectées
+    # Générer une description des hauteurs de chaque zone
+    zone_descriptions = []
+    for i, (h_start, h_end, gradient) in enumerate(duct_zones, 1):
+        zone_descriptions.append(f"  Layer {i}: from {h_start:.1f} m to {h_end:.1f} m (gradient = {gradient:.2f} N/km)")
+
+    zones_text = "\nDucting layers detected at the following altitudes:\n" + "\n".join(zone_descriptions)
+
+    # Analyse des types de ducting
     surface_based = any(h_start <= 100 for h_start, h_end, g in duct_zones)
     elevated = any(h_start > 100 for h_start, h_end, g in duct_zones)
 
     if surface_based and elevated:
-        return "Multiple ducting layers detected — both surface-based and elevated ducts are present.\nRadio signals may experience strong atmospheric trapping at multiple altitudes."
+        main_desc = (
+            "Multiple ducting layers detected — both surface-based and elevated ducts are present.\n"
+            "Radio signals may experience strong atmospheric trapping at multiple altitudes."
+        )
     elif surface_based:
-        return "Surface-based duct detected — strong negative gradient near the ground.\nRadio signals may travel much farther than usual along the surface due to atmospheric trapping."
+        main_desc = (
+            "Surface-based duct detected — strong negative gradient near the ground.\n"
+            "Radio signals may travel much farther than usual along the surface due to atmospheric trapping."
+        )
     elif elevated:
-        return "Elevated duct layer identified — negative refractivity gradient above ground level.\nRadio signals may be trapped between atmospheric layers, enabling long-range propagation over the horizon."
+        main_desc = (
+            "Elevated duct layer identified — negative refractivity gradient above ground level.\n"
+            "Radio signals may be trapped between atmospheric layers, enabling long-range propagation over the horizon."
+        )
+    else:
+        main_desc = (
+            "Potential ducting conditions — negative refractivity gradient observed, but marginal.\n"
+            "Unstable or transitional atmospheric layer may cause intermittent signal trapping."
+        )
 
-    # Cas de fallback si les conditions sont marginales (ce cas est rarement atteint ici, car la détection est déjà faite en amont)
-    return "Potential ducting conditions — negative refractivity gradient observed, but marginal.\nUnstable or transitional atmospheric layer may cause intermittent signal trapping."
+    return f"{main_desc}{zones_text}"
 
 
 
@@ -263,13 +289,15 @@ def main(test_index=None):
         output_image = f"{LOCAL_DIR}gradient_{gw_name}_{date.strftime('%Y-%m-%d')}.png"
 
 
-        # Clé d'unicité : nom de la gateway et date (pas heure)
-        key = (gw_name, date.date().isoformat())
+        date_str = date.date().isoformat()
 
-        if key in already_processed or os.path.exists(output_image):
-            log(f"Already processed : {key}")
+        if gw_name in already_processed and date_str in already_processed[gw_name]:
+            log(f"Already processed : ({gw_name}, {date_str})")
             continue
-        already_processed.add(key)
+
+        # Ajoute l'entrée au cache
+        already_processed.setdefault(gw_name, set()).add(date_str)
+
 
         closest = find_closest_station(mid_lat, mid_lon, stations)
         if not closest:

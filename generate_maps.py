@@ -116,6 +116,11 @@ for (gw_id, date), group in grouped:
             See IGRA graph of this day
         </button>
         """
+    else:
+        if color == "red":
+            info_html += """
+            <br><span style="color:red;"><i>Graph not available yet. Waiting for updated IGRA station data to generate it.</i></span>
+            """
 
     safe_html = escape_js(info_html)
     full_js = f"showSidebar(`{safe_html}`);"

@@ -5,4 +5,4 @@ set -e
 source venv/bin/activate
 
 echo "🚀 Launching application..."
-python3 main.py --logs
+python3 main.py --logs | tee /app/output/server.log

@@ -79,7 +79,7 @@ Now that you have registered your device on the Helium Network, you will need to
 
 ## Download
 
-Download the latest version [here](#) and unzip the package.
+Download the latest version [here](https://github.com/Kellemensch/LoRa-Helium-map/releases/download/v3.0.0/lora-helium-map.zip) and unzip the package.
 
 ---
 
