@@ -1,4 +1,5 @@
 import os
+import sys
 import subprocess
 import datetime
 import pandas as pd
@@ -7,8 +8,9 @@ import matplotlib.pyplot as plt
 import argparse
 import json
 import glob
-import requests
 from configs.config_coords import END_DEVICE_LAT, END_DEVICE_LON
+
+last_message_type = None  # Global tracker for logs
 
 CURRENT_YEAR = datetime.datetime.now().year
 
@@ -27,9 +29,27 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--logs", action="store_true")
 args = parser.parse_args()
 
-def log(*messages):
-    if args.logs:
-        print("[LOG]", *messages)
+last_message_type = None  # à définir quelque part en global avant usage
+
+def log(message):
+    global last_message_type
+
+    is_repeat = message.startswith("Already processed")
+
+    if is_repeat:
+        if last_message_type == "already":
+            # Écrase proprement la ligne précédente
+            print(f"\r[LOG] {message.ljust(80)}", end="", flush=True)
+        else:
+            print(f"[LOG] {message}", end="", flush=True)
+        last_message_type = "already"
+    else:
+        # Si on sort d'une répétition, terminer proprement la ligne précédente
+        if last_message_type == "already":
+            print()  # pour forcer un retour à la ligne
+        print(f"[LOG] {message}")
+        last_message_type = "other"
+
 
 os.makedirs(LOCAL_DIR, exist_ok=True)
 # Supprime les anciens fichiers pour être sûr d'avoir les infos les plus récentes (png et données IGRA)
