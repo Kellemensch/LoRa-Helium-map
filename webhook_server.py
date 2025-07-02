@@ -62,6 +62,12 @@ def haversine(lat1, lon1, lat2, lon2):
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c  # Distanza in km
 
+# Route pour test localtunnel
+@app.route("/")
+def index():
+    return "<html><body>OK</body></html>"
+
+
 @app.route('/helium-data', methods=['POST'])
 def helium_webhook():
     try:
