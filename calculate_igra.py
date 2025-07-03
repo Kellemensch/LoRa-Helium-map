@@ -29,23 +29,22 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--logs", action="store_true")
 args = parser.parse_args()
 
-last_message_type = None  # à définir quelque part en global avant usage
 
 def log(message):
     global last_message_type
 
-    is_repeat = message.startswith("Already processed")
+    is_repeat = message.startswith("Already processed") or message.startswith("No sounding")
 
     if is_repeat:
-        if last_message_type == "already":
+        if last_message_type == "repeat":
             # Écrase proprement la ligne précédente
             print(f"\r[LOG] {message.ljust(80)}", end="", flush=True)
         else:
             print(f"[LOG] {message}", end="", flush=True)
-        last_message_type = "already"
+        last_message_type = "repeat"
     else:
         # Si on sort d'une répétition, terminer proprement la ligne précédente
-        if last_message_type == "already":
+        if last_message_type == "repeat":
             print()  # pour forcer un retour à la ligne
         print(f"[LOG] {message}")
         last_message_type = "other"
