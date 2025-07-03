@@ -316,7 +316,7 @@ def main(test_index=None):
             continue
 
         # Ajoute l'entrée au cache
-        already_processed.setdefault(gw_name, set()).add(date_str)
+        # already_processed.setdefault(gw_name, set()).add(date_str)
 
 
         closest = find_closest_station(mid_lat, mid_lon, stations)
@@ -337,6 +337,9 @@ def main(test_index=None):
         )
 
         if results:
+            # Ajoute l'entrée au cache seulement si des résultats sont trouvés
+            already_processed.setdefault(gw_name, set()).add(date_str)
+
             gradients = compute_gradients(results[0]['levels'])
             # gateway_name_safe = row["gateway_name"].replace(" ", "_").replace("/", "_")
             plot_gradients(gradients, output_image, date.strftime('%Y-%m-%d'), gw_name, closest["id"])
