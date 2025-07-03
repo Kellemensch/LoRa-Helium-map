@@ -98,6 +98,7 @@ for (gw_id, date), group in grouped:
     <b>Gateway ID:</b> {gw_id}<br>
     <b>Latitude:</b> {lat}<br>
     <b>Longitude:</b> {lon}<br>
+    <b>Distance:</b> {round(row['dist_km'], 2)} km<br>
     <b>Visibility:</b> {row['visibility']}<br>
     <hr><b>Measurements for {date}:</b><br>
     """
