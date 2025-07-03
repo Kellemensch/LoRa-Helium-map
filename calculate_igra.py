@@ -311,6 +311,10 @@ def main(test_index=None):
 
         date_str = date.date().isoformat()
 
+        if visibility == "LOS":
+            # passer les LOS pour pas avoir de graphes inutiles
+            continue
+
         if gw_name in already_processed and date_str in already_processed[gw_name]:
             log(f"Already processed : ({gw_name}, {date_str})")
             continue
@@ -358,8 +362,8 @@ def main(test_index=None):
             date_key = pd.to_datetime(date).strftime("%Y-%m-%d")
 
             # Seulement si la gateway est en NLOS car plus intéressant
-            if visibility == "NLOS":
-                json_output[gw_id]["graphs"][date_key] = output_image
+            # if visibility == "NLOS":
+            json_output[gw_id]["graphs"][date_key] = output_image
 
 
             log("Results found and saved in json")
