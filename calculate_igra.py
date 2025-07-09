@@ -296,7 +296,16 @@ def main(test_index=None):
         df = df.iloc[[test_index]]
 
     already_processed = load_processed_gradients()
+    
+    # Charger les données JSON existantes si le fichier existe
     json_output = {}
+    if os.path.exists(OUTPUT_JSON):
+        try:
+            with open(OUTPUT_JSON, "r") as f:
+                json_output = json.load(f)
+        except Exception as e:
+            log(f"Error loading existing JSON file: {str(e)}")
+            json_output = {}
 
     for _, row in df.iterrows():
         lat, lon = row["gateway_lat"], row["gateway_long"]
@@ -356,6 +365,8 @@ def main(test_index=None):
                     "midpoint": [mid_lat, mid_lon],
                     "graphs": {}  # <- nouveau dictionnaire par date
                 }
+            elif "graphs" not in json_output[gw_id]:
+                json_output[gw_id]["graphs"] = {}
 
             # Ajouter le graphe du jour à "graphs"
             date_key = pd.to_datetime(date).strftime("%Y-%m-%d")
