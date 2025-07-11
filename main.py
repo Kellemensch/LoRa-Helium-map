@@ -13,6 +13,7 @@ MAP_GENERATION = "generate_maps.py"
 IGRA = "calculate_igra.py"
 DOWNLOAD_TERRAIN = "download_terrain.py"
 CONVERT_HGT = "convert_hgt_to_sdf.sh"
+STATS = "study-correlation/main_stats.py"
 
 # Définir l'argument --logs
 parser = argparse.ArgumentParser(description="Logs option")
@@ -31,11 +32,12 @@ def run_all():
         p = subprocess.Popen(["bash", LOCALTUNNEL, subdomain])
     subprocesses.append(p)
     time.sleep(2)
-    if args.logs:
-        p2 = subprocess.Popen(["python3", WEBHOOK, "--logs"])
-    else:
-        p2 = subprocess.Popen(["python3", WEBHOOK])
-    subprocesses.append(p2)
+    with open("/app/output/server.log", "w") as log_file:
+        if args.logs:
+            p2 = subprocess.Popen(["python3", WEBHOOK, "--logs"], stdout=log_file)
+        else:
+            p2 = subprocess.Popen(["python3", WEBHOOK], stdout=log_file)
+        subprocesses.append(p2)
 
     run_igra()
     run_map()
@@ -70,6 +72,11 @@ def run_igra():
     subprocesses.append(p5)
     p5.wait()
 
+def run_stats():
+    print("Running stats on correlation...")
+    p6 = subprocess.Popen(["python3", STATS])
+    subprocesses.append(p6)
+
 def cleanup(signum=None, frame=None):
     print("Stopping all subprocesses...")
     for p in subprocesses:
@@ -97,11 +104,16 @@ try:
     run_all()
     fix_output_ownership()
 
+    run_stats()
+
     # Lance le calcul splat et la génération de map toutes les 5 minutes
     schedule.every(5).minutes.do(run_map)
 
     # Lance le calcul des stations IGRA 2 fois par jour
     schedule.every(12).hours.do(run_igra)
+
+    # Lance les statistiques une fois par jour
+    schedule.every(24).hours.do(run_stats)
 
     while True:
         schedule.run_pending()

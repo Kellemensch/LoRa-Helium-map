@@ -1,50 +1,69 @@
 #!/bin/bash
 
-SUBDOMAIN=$(echo "$1" | tr -d '\n' | tr -d '\r')  #Enlever le \n à la fin du read
+SUBDOMAIN=$(echo "$1" | tr -d '\n' | tr -d '\r')
 PORT=5000
 HOST="0.0.0.0"
-MAX_RETRIES=10
+MAX_RETRIES=5
 RETRY_INTERVAL=2
 GRACE_PERIOD=5
+LOCALTUNNEL_CMD="lt"  # ou "/usr/local/bin/lt" si besoin
 
 if [[ -z "$SUBDOMAIN" ]]; then
     echo "Usage: $0 <subdomain>"
     exit 1
 fi
 
+cleanup() {
+    if [[ -n "$LT_PID" ]]; then
+        kill "$LT_PID" 2>/dev/null
+        wait "$LT_PID" 2>/dev/null
+    fi
+}
 
 start_tunnel() {
-    echo "Launching localtunnel on subdomain '$SUBDOMAIN'..."
-    lt --port "$PORT" --subdomain "$SUBDOMAIN" --local-host "$HOST" &
+    cleanup  # Nettoyer les anciens processus avant de démarrer
+    echo "$(date) - Launching localtunnel on subdomain '$SUBDOMAIN'..."
+    $LOCALTUNNEL_CMD --port "$PORT" --subdomain "$SUBDOMAIN" --local-host "$HOST" > /dev/null 2>&1 &
     LT_PID=$!
+    disown $LT_PID  # Empêcher le shell d'attendre le processus
 }
 
 check_tunnel() {
-    # echo "Waiting ${GRACE_PERIOD}s before checking tunnel..."
     sleep "$GRACE_PERIOD"
-
-    for ((i=1; i<=MAX_RETRIES; i++)); do
-        # echo "Checking if tunnel is alive (attempt $i/$MAX_RETRIES)..."
-        if curl -s "http://${SUBDOMAIN}.loca.lt/" | grep -q "OK"; then
-            # echo "Tunnel is up and running!"
+    
+    local attempts=0
+    while [[ $attempts -lt $MAX_RETRIES ]]; do
+        if curl -s --max-time 5 "http://${SUBDOMAIN}.loca.lt/" | grep -q "OK"; then
             return 0
         fi
         sleep "$RETRY_INTERVAL"
+        attempts=$((attempts+1))
     done
-    # echo "Tunnel failed to start after $MAX_RETRIES attempts."
     return 1
 }
 
+# Capturer Ctrl+C pour nettoyer proprement
+trap cleanup EXIT
+
 while true; do
     start_tunnel
+    
     if check_tunnel; then
-        # Attendre que le process lt se termine (ex: déconnexion)
-        wait $LT_PID
-        echo "Tunnel interrupted. Relaunching in 5 seconds..."
+        echo "$(date) - Tunnel is up and running"
+        # Attendre que le tunnel se termine (ou vérifier périodiquement)
+        while kill -0 "$LT_PID" 2>/dev/null; do
+            sleep 60
+            # Vérifier périodiquement que le tunnel répond toujours
+            if ! curl -s --max-time 5 "http://${SUBDOMAIN}.loca.lt/" | grep -q "OK"; then
+                echo "$(date) - Tunnel seems down, restarting..."
+                break
+            fi
+        done
     else
-        # Si le tunnel n'était pas accessible, tuer le process et relancer
-        echo "Killing failed tunnel process..."
-        kill $LT_PID 2>/dev/null
+        echo "$(date) - Tunnel failed to start after $MAX_RETRIES attempts"
     fi
+    
+    cleanup
+    echo "$(date) - Restarting tunnel in 5 seconds..."
     sleep 5
 done
