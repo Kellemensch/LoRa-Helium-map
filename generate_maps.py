@@ -368,6 +368,38 @@ document.addEventListener("DOMContentLoaded", function() {{
 """
 m.get_root().header.add_child(folium.Element(script))
 
+# === Ajout du bouton vers les stats ===
+font_awesome = '''
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+'''
+m.get_root().header.add_child(folium.Element(font_awesome))
+
+stats_button_html = '''
+<div style="
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 1000;
+">
+    <a href="/stats" target="_blank" style="
+        display: inline-block;
+        padding: 10px 15px;
+        background-color: #4361ee;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+        transition: all 0.3s ease;
+    " onmouseover="this.style.backgroundColor='#3a56d5'" onmouseout="this.style.backgroundColor='#4361ee'">
+        <i class="fa fa-chart-bar"></i> View Statistics
+    </a>
+</div>
+'''
+
+m.get_root().html.add_child(folium.Element(stats_button_html))
+
 
 # === Sauvegarde finale ===
 m.save(OUTPUT_MAP)
