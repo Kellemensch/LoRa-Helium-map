@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LoRa Helium Map</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100vh;
+        }
+        
+        /* Sidebar simplifiée */
+        #sidebar {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 320px;
+            height: 90%;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 15px;
+        }
+        
+        #sidebar h4 {
+            margin-top: 0;
+            color: #333;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        #info-content {
+            line-height: 1.5;
+        }
+        
+        .info-item {
+            margin-bottom: 8px;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            display: inline-block;
+            min-width: 120px;
+        }
+        
+        /* Bouton IGRA */
+        .igra-btn {
+            display: inline-block;
+            background: #4361ee;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+        
+        /* Légende */
+        #legend {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+            font-size: 0.9rem;
+        }
+        
+        .legend-item {
+            margin-bottom: 5px;
+        }
+        
+        /* Timeline */
+        #timeline-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+            min-width: 300px;
+            max-width: 500px;
+            text-align: center;
+        }
+        
+        .timeline-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 8px 0;
+        }
+        
+        #dateSlider {
+            flex-grow: 1;
+        }
+        
+        /* Bouton Stats */
+        #stats-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .stats-btn {
+            display: inline-block;
+            background: #4361ee;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    
+    <!-- Sidebar -->
+    <div id="sidebar">
+        <button onclick="document.getElementById('sidebar').style.display='none'" 
+                style="float: right; background: none; border: none; font-size: 18px; cursor: pointer;">×</button>
+        <h4>Gateway Information</h4>
+        <div id="info-content">
+            <p><i>Click on a gateway to view details</i></p>
+            <p><i>You can close this panel by clicking the × button</i></p>
+        </div>
+    </div>
+    
+    <!-- Legend -->
+    <div id="legend">
+        <b>Legend</b><br>
+        <div class="legend-item"><i class="fa fa-info-circle" style="color:deepskyblue;"></i> End Node</div>
+        <div class="legend-item"><i class="fa fa-circle" style="color:green; font-size: 0.8rem;"></i> LOS Gateway</div>
+        <div class="legend-item"><i class="fa fa-circle" style="color:red; font-size: 0.8rem;"></i> NLOS Gateway</div>
+        <div class="legend-item"><i class="fa fa-circle" style="color:purple; font-size: 0.8rem;"></i> <a href="https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ncdc:C00975"> IGRA </a> Station</div>
+    </div>
+    
+    <!-- Timeline -->
+    <div id="timeline-container">
+        <div>Select a date</div>
+        <div class="timeline-controls">
+            <button id="prevDate" style="padding: 5px 10px; border: 1px solid #ddd; border-radius: 4px;">&lt; Prev</button>
+            <input type="range" id="dateSlider" min="0" max="0" value="0" step="1">
+            <button id="nextDate" style="padding: 5px 10px; border: 1px solid #ddd; border-radius: 4px;">Next &gt;</button>
+        </div>
+        <div id="currentDate" style="font-weight: bold; margin-top: 5px;">Loading...</div>
+    </div>
+    
+    <!-- Stats Button -->
+    <div id="stats-button">
+        <a href="/stats" target="_blank" class="stats-btn">
+            <i class="fa fa-chart-bar"></i> View Statistics
+        </a>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="{{ url_for('static', filename='dynamic_map.js') }}"></script>
+</body>
+</html>

@@ -6,6 +6,7 @@ geopy
 matplotlib
 argparse
 requests
+numpy
 scipy
 scikit-learn
 seaborn

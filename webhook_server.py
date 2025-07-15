@@ -17,6 +17,7 @@ import gzip
 from functools import lru_cache
 import threading
 from collections import defaultdict
+import numpy as np
 from configs.config_coords import END_DEVICE_LAT, END_DEVICE_LON
 
 # Désactive les logs de requêtes Werkzeug (Flask)
@@ -46,6 +47,8 @@ CSV_FILE = "/app/output/data/helium_gateway_data.csv"
 CSV_HEADER = ["gwTime", "gatewayId", "gateway_name", "gateway_id", 
               "node_long", "node_lat", "gateway_long", "gateway_lat", 
               "dist_km", "rssi", "snr", "visibility"]
+
+IGRA_LINKS_JSON = "/app/output/igra-datas/map_links.json"
 
 JSON_INDEX = "/app/output/data/gateways_index.json.gz"
 
@@ -171,66 +174,117 @@ def helium_webhook():
         log("Errore:", e)
         return jsonify({"status": "error", "message": str(e)}), 500
     
+
+# Chargement des données (peut être optimisé avec un cache)
+def load_data():
+    df = pd.read_csv(CSV_FILE)
+    df['date'] = pd.to_datetime(df['gwTime'], format='ISO8601').dt.strftime('%Y-%m-%d')
+    return df
+
+# Route pour obtenir les dates disponibles
+@app.route('/api/dates')
+def get_dates():
+    df = load_data()
+    dates = sorted(df['date'].unique().tolist())
+    return jsonify(dates)
+
+# Route pour obtenir les stations IGRA
+@app.route('/api/igra_stations')
+def get_igra_stations():
+    try:
+        with open(IGRA_LINKS_JSON, "r") as f:
+            igra_links = json.load(f)
+        
+        # Extraire les stations uniques
+        stations = {}
+        for gateway_data in igra_links.values():
+            station_id = gateway_data["station_id"]
+            if station_id not in stations:
+                stations[station_id] = {
+                    "id": station_id,
+                    "lat": gateway_data["station_coords"][0],
+                    "lon": gateway_data["station_coords"][1]
+                }
+        
+        return jsonify(list(stations.values()))
+    
+    except FileNotFoundError:
+        return jsonify({"error": "IGRA links file not found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+
+# Route pour obtenir les gateways d'une date spécifique
+@app.route('/api/gateways')
+def get_gateways():
+    date = request.args.get('date')
+    if not date:
+        return jsonify({"error": "Date parameter is required"}), 400
+    
+    df = load_data()
+    df_date = df[df['date'] == date]
+    
+    if df_date.empty:
+            return jsonify({"error": "No data for this date"}), 404
+        
+    # Nettoyage des données
+    df_date = df_date.replace([np.nan, 'NaN', 'N/A'], None)
+    
+    # Grouper par gateway
+    grouped = df_date.groupby(["gatewayId", "date"])
+    
+    result = []
+    for (gw_id, _), group in grouped:
+        row = group.iloc[0]  # Première ligne pour les infos statiques
+        
+        gateway_data = {
+            "gatewayId": gw_id,
+            "gateway_name": row['gateway_name'],
+            "lat": round(row['gateway_lat'], 5),
+            "lon": round(row['gateway_long'], 5),
+            "dist_km": round(row['dist_km'], 2),
+            "visibility": row['visibility'],
+            "measurements": [],
+            "graph_path": None
+        }
+        
+        # Ajouter les mesures
+        for _, r in group.iterrows():
+            gateway_data["measurements"].append({
+                "gwTime": r['gwTime'],
+                "rssi": r.get('rssi'),
+                "snr": r.get('snr')
+            })
+        
+        # Vérifier s'il y a un graphique IGRA
+        try:
+            with open(IGRA_LINKS_JSON, "r") as f:
+                igra_links = json.load(f)
+                graph_path = igra_links.get(gw_id, {}).get("graphs", {}).get(date)
+                if graph_path:
+                    gateway_data["graph_path"] = graph_path.replace("./", "")
+        except FileNotFoundError:
+            pass
+        
+        result.append(gateway_data)
+    
+    return jsonify(result)
+
 @app.route('/dynamic-map')
 def index():
-    return render_template('dynamic_map.html',
-                         end_device_lat=END_DEVICE_LAT,
-                         end_device_lon=END_DEVICE_LON)
+    return render_template("dynamic_map.html")
 
+@app.route('/api/config')
+def get_config():
+    return jsonify({
+        "end_device_lat": END_DEVICE_LAT,
+        "end_device_lon": END_DEVICE_LON,
+        "zoom_level": 12
+    })
 
-@app.route('/get-dates')
-def get_dates():
-    """Renvoie les dates disponibles"""
-    try:
-        if not os.path.exists(JSON_INDEX):
-            create_index()
-        
-        # Lecture du fichier compressé
-        with gzip.open(JSON_INDEX, 'rt', encoding='utf-8') as f:
-            index = json.load(f)
-            
-        return jsonify({
-            'status': 'success',
-            'dates': sorted(index.keys())
-        })
-        
-    except Exception as e:
-        app.logger.error(f"Error in get_dates: {str(e)}")
-        return jsonify({
-            'status': 'error',
-            'message': 'Could not load dates'
-        }), 500
-
-
-@app.route('/get-gateways/<date>')
-def get_gateways(date):
-    """Renvoie les gateways pour une date donnée"""
-    try:
-        if not os.path.exists(JSON_INDEX):
-            create_index()
-        
-        # Lecture du fichier compressé
-        with gzip.open(JSON_INDEX, 'rt', encoding='utf-8') as f:
-            index = json.load(f)
-            
-        if date not in index:
-            return jsonify({
-                'status': 'error',
-                'message': 'Date not found'
-            }), 404
-            
-        return jsonify({
-            'status': 'success',
-            'date': date,
-            'gateways': index[date]
-        })
-        
-    except Exception as e:
-        app.logger.error(f"Error in get_gateways: {str(e)}")
-        return jsonify({
-            'status': 'error',
-            'message': 'Could not load gateways'
-        }), 500
+@app.route('/dynamic_map.js')
+def serve_map_js():
+    return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'dynamic_map.js')
 
 
 
