@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stats dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --accent-color: #4895ef;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+            --success-color: #4cc9f0;
+            --warning-color: #f8961e;
+            --danger-color: #f94144;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: var(--dark-color);
+            background-color: #f5f7fa;
+            padding: 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            font-weight: 300;
+            opacity: 0.9;
+        }
+        
+        .last-updated {
+            background-color: rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(600px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .graph-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .graph-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .graph-header {
+            background-color: var(--light-color);
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .graph-title {
+            font-weight: 500;
+            color: var(--dark-color);
+            font-size: 1.2rem;
+        }
+        
+        .graph-type {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .graph-content {
+            padding: 1.5rem;
+        }
+        
+        .graph-img {
+            width: 100%;
+            height: auto;
+            border-radius: 5px;
+            display: block;
+            margin: 0 auto;
+            max-width: 100%;
+        }
+        
+        .graph-iframe {
+            width: 100%;
+            height: 500px;
+            border: none;
+            border-radius: 5px;
+        }
+        
+        .graph-description {
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: var(--light-color);
+            border-radius: 5px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding: 2rem;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .refresh-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background-color: var(--primary-color);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+        
+        .refresh-btn:hover {
+            background-color: var(--secondary-color);
+            transform: rotate(360deg);
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+            }
+            
+            header {
+                padding: 1.5rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Statistical dashboard</h1>
+        <p class="subtitle">Analysis and visualisation of daily data</p>
+        <!-- <div class="last-updated">
+            <i class="fas fa-sync-alt"></i> Last updated: <span id="update-time">{{ last_update }}</span>
+        </div> -->
+    </header>
+    
+    <div class="dashboard-container">
+        <!-- Graphiques Matplotlib (PNG) -->
+        {% for img in images %}
+        <div class="graph-card">
+            <div class="graph-header">
+                <div class="graph-title">Graph {{ loop.index }}</div>
+                <div class="graph-type">Matplotlib</div>
+            </div>
+            <div class="graph-content">
+                <img src="{{ url_for('static', filename='stats/' + img) }}" 
+                     alt="Graphique {{ loop.index }}" 
+                     class="graph-img"
+                    >
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div class="refresh-btn" onclick="window.location.reload()">
+        <i class="fas fa-sync-alt"></i>
+    </div>
+    
+    <script>
+        // Mise à jour de l'heure de dernière actualisation
+        function updateTime() {
+            const now = new Date();
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            };
+            document.getElementById('update-time').textContent = now.toLocaleDateString('fr-FR', options);
+        }
+        
+        // Actualiser toutes les heures
+        updateTime();
+        setInterval(updateTime, 3600000);
+        
+        // Gestion des erreurs de chargement des images
+        document.addEventListener('DOMContentLoaded', function() {
+            const images = document.querySelectorAll('.graph-img');
+            images.forEach(img => {
+                img.addEventListener('error', function() {
+                    this.src = "{{ url_for('static', filename='stats/fallback.png') }}";
+                    this.alt = "Image non disponible";
+                    this.parentElement.querySelector('.graph-description p').textContent = 
+                        "Le graphique n'a pas pu être chargé. Veuillez actualiser la page ou vérifier les données sources.";
+                });
+            });
+        });
+    </script>
+</body>
+</html>
