@@ -167,7 +167,7 @@ def helium_webhook():
                                     END_DEVICE_LON, END_DEVICE_LAT, gateway_long, gateway_lat, 
                                     dist_km, rssi, snr, "N/A"])
                     
-
+        generate_optimized_json()
         return jsonify({"status": "success", "message": "Dati ricevuti e salvati in CSV"}), 200
 
     except Exception as e:
@@ -175,18 +175,61 @@ def helium_webhook():
         return jsonify({"status": "error", "message": str(e)}), 500
     
 
+JSON_OPTIMIZED_PATH = "/app/output/data/optimized_gateways_data.json"
+
+def generate_optimized_json():
+    df = pd.read_csv(CSV_FILE, parse_dates=['gwTime'])
+    df['date'] = pd.to_datetime(df['gwTime'], format='ISO8601').dt.strftime('%Y-%m-%d')
+    # Nettoyage des données
+    df = df.replace([np.nan, 'NaN', 'N/A'], None)
+    
+    # Charger les liens IGRA une seule fois
+    with open(IGRA_LINKS_JSON, 'r') as f:
+        igra_links = json.load(f)
+    
+    # Structurer les données par date → gateway
+    optimized_data = {}
+    for date, group in df.groupby('date'):
+        optimized_data[date] = {}
+        for gw_id, gw_data in group.groupby('gatewayId'):
+            optimized_data[date][gw_id] = {
+                'name': gw_data['gateway_name'].iloc[0],
+                'lat': round(gw_data['gateway_lat'].iloc[0], 5),
+                'lon': round(gw_data['gateway_long'].iloc[0], 5),
+                'dist_km': round(gw_data['dist_km'].iloc[0], 2),
+                'visibility': gw_data['visibility'].iloc[0],
+                'measurements': gw_data[['gwTime', 'rssi', 'snr']].to_dict('records'),
+                'graph_path': igra_links.get(gw_id, {}).get('graphs', {}).get(date, '').replace('./', '')
+            }
+    
+    # Sauvegarder le fichier
+    with open(JSON_OPTIMIZED_PATH, 'w') as f:
+        json.dump(optimized_data, f, indent=2)
+
+@app.route('/api/optimized_gateways')
+def get_optimized_gateways():
+    if not os.path.exists(JSON_OPTIMIZED_PATH):
+        generate_optimized_json()
+    return send_from_directory('/app/output/data', 'optimized_gateways_data.json')
+
+
 # Chargement des données (peut être optimisé avec un cache)
 def load_data():
     df = pd.read_csv(CSV_FILE)
     df['date'] = pd.to_datetime(df['gwTime'], format='ISO8601').dt.strftime('%Y-%m-%d')
     return df
 
-# Route pour obtenir les dates disponibles
 @app.route('/api/dates')
 def get_dates():
-    df = load_data()
-    dates = sorted(df['date'].unique().tolist())
-    return jsonify(dates)
+    with open(JSON_OPTIMIZED_PATH, 'r') as f:
+        data = json.load(f)
+    return jsonify(sorted(data.keys()))
+# Route pour obtenir les dates disponibles
+# @app.route('/api/dates')
+# def get_dates():
+#     df = load_data()
+#     dates = sorted(df['date'].unique().tolist())
+#     return jsonify(dates)
 
 # Route pour obtenir les stations IGRA
 @app.route('/api/igra_stations')
