@@ -25,7 +25,7 @@ We provide **two versions** of the project, both fully maintained:
 | Version           | Description                                     | Link                                                                                    |
 | ----------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------- |
 | Classic Python | Manual execution using Python scripts           | [View on GitHub](https://github.com/Kellemensch/LoRa-Helium-map)                        |
-| Docker | Fully containerized version for easy deployment | [Guide](./README_docker.md) |
+| Docker | Fully containerized version for easy deployment | [Guide](./docs/README_docker.md) |
 
 You can browse each version’s releases and documentation using the links above.
 
@@ -64,7 +64,7 @@ Visit the GitHub repository to explore the code, issues, discussions, and contri
 
 ## How to Use
 
-Refer to the [README](./README.md) for full installation, usage, and structure instructions for both versions.
+Refer to the [README](./docs/README.md) for full installation, usage, and structure instructions for both versions.
 
 If you prefer Docker:
 
@@ -81,7 +81,7 @@ python3 main.py
 
 ---
 
-## Live Demos *(Optional)*
+## Live Demos
 
 > Coming soon: GitHub Pages integration for interactive examples (map previews, graph gallery).
 
