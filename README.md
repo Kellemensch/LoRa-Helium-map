@@ -1,89 +1,165 @@
-# LoRa-Helium-map
+# 🌐 LoRa-Helium-Map
 
-A Python toolkit to retrieve real-time datas from a LoRaWan end-node connected to the [Helium](https://www.helium.com/) network and to process IGRA v2 radiosonde data, compute atmospheric refractivity gradients, and visualize potential tropospheric ducts.
+A Python toolkit to retrieve real-time data from a LoRaWAN end-node connected to the [Helium Network](https://www.helium.com/), process radiosonde observations (IGRA v2 or ERA5), compute atmospheric refractivity gradients, and visualize potential tropospheric ducts.
+
+<div align="center">
+  <img src="./examples/example_map.png" width="60%" alt="Interactive map example"/>
+  <p><em>Interactive map with radio links and gradient graphs</em></p>
+</div>
+
+---
+
+## Table of Contents
+
+* [Features](#features)
+* [Versions](#versions)
+
+  * [Classic Python Version](#classic-python-version)
+  * [Docker Version](#docker-version)
+* [Repository Structure](#repository-structure)
+* [Installation & Usage](#installation--usage)
+* [Output Examples](#output-examples)
+* [Releases](#releases)
+* [License](#license)
 
 ---
 
 ## Features
 
--  Retrieve packets information and gateways received from the end-node
--  Find the nearest [IGRA radiosonde](https://www.ncei.noaa.gov/products/weather-balloon/integrated-global-radiosonde-archive) from the link gateway <-> end-node
--  Parse raw IGRA v2 `.txt` files (multi-level radiosonde observations)
--  Compute refractivity (N) and its vertical gradient (ΔN/Δh)
--  Detect tropospheric ducts
--  Generate vertical gradient graphs in PNG format
--  Generate an interactive map showing all the gateways receiving the packets with their corresponding graphs
+* Real-time packet + gateway retrieval from Helium
+* Automatic IGRA station matching to each link (or ERA5 support)
+* Compute refractivity (N) and vertical gradient (∆N/∆h)
+* Detect tropospheric ducts based on gradients
+* Generate vertical gradient graphs (PNG)
+* Render an interactive map with all radio links
+* Use SPLAT! to compute LOS, terrain profiles, and visibility
 
 ---
 
-##  Repository Structure
+## Versions
+
+### Classic Python Version
+
+> Standalone scripts launched manually. Requires setting up Python env, installing dependencies, and running with `main.py`.
+
+* [Latest release](https://github.com/Kellemensch/LoRa-Helium-map/releases/tag/v2.0.0)
+* Uses: `main.py`, `setup.sh`, `generate_maps.py`, `calculate_igra.py`, etc.
+* Outputs: `map.html`, PNG graphs, CSV logs
+
+### Docker Version
+
+> Fully containerized. Ideal for easy deployment, reproducibility, and automation.
+
+* [Docker release](https://github.com/Kellemensch/LoRa-Helium-map/releases/tag/v3.0.0)
+* Run with a single script (`run.sh`)
+* Background process with logs streaming
+* Outputs are identical, but no setup needed on host (except Docker)
+
+See full [Docker installation & configuration guide](./README_docker.md)
+
+
+---
+
+## Repository Structure
+
 ```
-/data/ # Contains data retrieved from Helium
-├──  terrain/ # QTH files for SPLAT
-├──  helium_data_msg.txt
-└──  helium_gateway_data.csv
-/igra-datas/ # Contains IGRA downloaded data and builded information for map
-├── derived/ # Contains refractivity graphs from derived measurements
-├── igra2-station-list.txt
-└── map_links.json
-/maps/ # Contains .sdf and .hgt files for SPLAT's map
-/splat-runs/ # Contains .txt report files from SPLAT
-├── img/ # Contains terrain profiles and LOS between end-node and gateways
-└── EndNode-to-gatewayName.txt
-/venv/ # Python's virtual environment containing dependencies
-calculate_igra.py
-convert_hgt_to_sdf.sh
-generate_maps.py
-main.py
-map.html
-README.md
-requirements.txt
-run_localtunnel.sh
-run_splat.py
-setup.sh
-webhook_server.py
+/data/               # Helium data and terrain models for SPLAT!
+  ├── terrain/       # QTH terrain files
+  ├── helium_data_msg.txt
+  └── helium_gateway_data.csv
+/igra-datas/         # Radiosonde (IGRA) datasets and analysis
+  ├── derived/       # Generated gradient graphs
+  ├── igra2-station-list.txt
+  └── map_links.json
+/maps/               # SPLAT! terrain and map files (.sdf/.hgt)
+/splat-runs/         # SPLAT! outputs (LOS, profiles)
+  ├── img/
+  └── EndNode-to-*.txt
+/examples/           # Example outputs (map + gradient graph)
+/venv/               # Python virtual environment (classic version)
+/docker/             # Dockerfile and helper scripts (new version)
+  └── run.sh
+main.py              # Webhook + full processing loop
+generate_maps.py     # Generate interactive maps
+calculate_igra.py    # Compute gradients from IGRA files
+run_splat.py         # Automate SPLAT! execution
+convert_hgt_to_sdf.sh# Terrain conversion tool
+setup.sh             # Auto-dependency installer (classic)
+/README.md
 ```
 
 ---
 
-## Prerequisites
+## Installation & Usage
 
-You need to have an end-node connected to the Helium Network and create an HTTP integration on your application.
+### Classic Version
 
-Simply put the address you want to use for your localtunnel and remember it or write it down.
+1. Clone the repo:
+
+   ```bash
+   git clone https://github.com/Kellemensch/LoRa-Helium-map
+   cd LoRa-Helium-map
+   ```
+
+2. Run setup script:
+
+   ```bash
+   bash setup.sh
+   ```
+
+3. Launch main script:
+
+   ```bash
+   python3 main.py
+   ```
+
+   Or with logs:
+
+   ```bash
+   python3 main.py --logs
+   ```
 
 ---
 
-## Installation
+### Docker Version
 
-``` bash
-git clone https://github.com/Kellemensch/LoRa-Helium-map
-cd LoRa-Helium-map
-source setup.py
-```
+1. Build and run the container:
 
-You will be then asked to write your end-node Latitude and Longitude.
+   ```bash
+   bash run.sh
+   ```
 
-## Launch
+2. The container runs in background and streams logs. You can see them with :
 
-``` bash
-python3 main.py
-```
-Or with logs showing on Shell
-``` bash
-python3 main.py --logs
-```
+   ```bash
+   docker logs -f lora-map
+   ```
 
-## Results
 
-The output map will be generated as *map.html* and can be open with a web browser.
+> All outputs (map, graphs) will appear in the mounted volumes, same as the classic version.
 
-All the gradients graphs can be found in *igra-datas/derived/*
+---
 
-## Example Output
+## Output Examples
 
-### Interactive map example
-![Map example](./examples/example_map.png)
+### Interactive Map
 
-### Refractivity Gradient Graph example
-![Refractivity gradient](./examples/example_gradient.png)
+<img src="./examples/example_map.png" width="70%" alt="Map example"/>
+
+### Refractivity Gradient Graph
+
+<img src="./examples/example_gradient.png" width="60%" alt="Gradient graph"/>
+
+---
+
+## Releases
+
+* [All Releases](https://github.com/Kellemensch/LoRa-Helium-map/releases)
+* [Docker Release](https://github.com/Kellemensch/LoRa-Helium-map/releases/tag/v3.0.0)
+* Each release corresponds to a stable state of the repo (Classic / Docker)
+
+---
+
+## License
+
+MIT License.
