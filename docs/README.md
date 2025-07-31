@@ -3,7 +3,7 @@
 A Python toolkit to retrieve real-time data from a LoRaWAN end-node connected to the [Helium Network](https://www.helium.com/), process radiosonde observations (IGRA v2 or ERA5), compute atmospheric refractivity gradients, and visualize potential tropospheric ducts.
 
 <div align="center">
-  <img src="./examples/example_map.png" width="60%" alt="Interactive map example"/>
+  <img src="../examples/example_map.png" width="60%" alt="Interactive map example"/>
   <p><em>Interactive map with radio links and gradient graphs</em></p>
 </div>
 
@@ -55,7 +55,7 @@ A Python toolkit to retrieve real-time data from a LoRaWAN end-node connected to
 * Background process with logs streaming
 * Outputs are identical, but no setup needed on host (except Docker)
 
-See full [Docker installation & configuration guide](./README_docker.md)
+See full [Docker installation & configuration guide](./docs/README_docker.md)
 
 
 ---
@@ -144,11 +144,11 @@ setup.sh             # Auto-dependency installer (classic)
 
 ### Interactive Map
 
-<img src="./examples/example_map.png" width="70%" alt="Map example"/>
+<img src="../examples/example_map.png" width="70%" alt="Map example"/>
 
 ### Refractivity Gradient Graph
 
-<img src="./examples/example_gradient.png" width="60%" alt="Gradient graph"/>
+<img src="../examples/example_gradient.png" width="60%" alt="Gradient graph"/>
 
 ---
 
