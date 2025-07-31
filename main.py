@@ -26,11 +26,11 @@ with open("configs/.subdomain", "r") as f:
 
 def run_all():
     run_terrain()
-    if args.logs:
-        p = subprocess.Popen(["bash", LOCALTUNNEL, subdomain, "--logs"])
-    else:
-        p = subprocess.Popen(["bash", LOCALTUNNEL, subdomain])
-    subprocesses.append(p)
+    # if args.logs:
+    #     p = subprocess.Popen(["bash", LOCALTUNNEL, subdomain, "--logs"])
+    # else:
+    #     p = subprocess.Popen(["bash", LOCALTUNNEL, subdomain])
+    # subprocesses.append(p)
     time.sleep(2)
     with open("/app/output/server.log", "w") as log_file:
         if args.logs:

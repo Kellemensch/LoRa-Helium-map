@@ -5,8 +5,9 @@ services:
       args:
         USER_ID: ${LOCAL_UID}
         GROUP_ID: ${LOCAL_GID}
-    image: kellemensch/lora-helium-map:latest
+    image: kellemensch/lora-helium-map:marconilab2
     container_name: lora-map
+    # user: "${LOCAL_UID}:${LOCAL_GID}"
     ports:
       - "5000:5000"
     volumes:
@@ -23,5 +24,11 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - WATCHTOWER_CLEANUP=true
-      - WATCHTOWER_POLL_INTERVAL=300  # toutes les 5 minutes
+      - WATCHTOWER_POLL_INTERVAL=60  # toutes les 1 minute
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    command: tunnel --url http://app:5000
     restart: unless-stopped
