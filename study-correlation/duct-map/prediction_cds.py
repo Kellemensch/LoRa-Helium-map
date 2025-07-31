@@ -75,6 +75,45 @@
 
 
 
+# import cdsapi
+
+# dataset = "reanalysis-era5-pressure-levels"
+# request = {
+#     "product_type": ["reanalysis"],
+#     "variable": [
+#         "geopotential",
+#         "relative_humidity",
+#         "temperature"
+#     ],
+#     "year": ["2025"],
+#     "month": ["06"],
+#     "day": [
+#         "01", "02", "03",
+#         "04", "05", "06",
+#         "07", "08", "09",
+#         "10", "11", "12",
+#         "13", "14", "15",
+#         "16", "17", "18",
+#         "19", "20", "21",
+#         "22", "23", "24",
+#         "25", "26", "27",
+#         "28", "29", "30"
+#     ],
+#     "time": ["00:00", "12:00"],
+#     "pressure_level": [
+#         "800", "825", "850",
+#         "875", "900", "925",
+#         "950", "975", "1000"
+#     ],
+#     "data_format": "grib",
+#     "download_format": "zip"
+# }
+
+# client = cdsapi.Client()
+# client.retrieve(dataset, request).download()
+
+
+
 
 
 # import xarray as xr
@@ -85,7 +124,7 @@
 # from datetime import datetime
 
 # # === Paramètres ===
-# GRIB_FILE = "6fec2b315499ecaaa7b80c2e686b4f6d/data.grib"  # chemin vers ton fichier .grib
+# GRIB_FILE = "July15-AllHours/data.grib"  # chemin vers ton fichier .grib
 # TARGET_DATETIME = "2023-07-15T12:00"  # date/heure à analyser
 # LAT_MIN, LAT_MAX = 35, 70
 # LON_MIN, LON_MAX = -15, 40
@@ -156,63 +195,146 @@
 # plt.show()
 
 
+# import xarray as xr
+# import numpy as np
+# import matplotlib.pyplot as plt
+# import cartopy.crs as ccrs
+# import cartopy.feature as cfeature
+# import imageio
+# from datetime import datetime
+# from io import BytesIO
+
+# # === PARAMÈTRES ===
+# ERA5_GRIB_FILE = "July15-AllHours/data.grib"  # ton fichier GRIB
+# TARGET_DATE = "2025-07-15"
+# PRESSURE_LEVELS = [1000, 975, 950, 925, 900, 850]
+# R_DUCTING = -157  # seuil de ducting (N/km)
+
+# # Domaine européen
+# LAT_MIN, LAT_MAX = 30, 70
+# LON_MIN, LON_MAX = -15, 40
+
+# # === CHARGEMENT ===
+# ds = xr.open_dataset(ERA5_GRIB_FILE, engine="cfgrib")
+# ds = ds.sel(isobaricInhPa=PRESSURE_LEVELS)
+
+# # Filtrage sur l'Europe
+# ds = ds.sel(latitude=slice(LAT_MAX, LAT_MIN), longitude=slice(LON_MIN, LON_MAX))
+
+# # Filtrage sur une seule journée
+# all_times = ds.time.sel(time=ds.time.dt.date == np.datetime64(TARGET_DATE)).values
+
+# print(f" {len(all_times)} timestamps trouvés pour {TARGET_DATE}")
+
+# # === PRÉPARATION GIF ===
+# frames = []
+
+# for t in all_times:
+#     # Sous-ensemble temporel
+#     d = ds.sel(time=t)
+
+#     T = d['t'] - 273.15  # [K] → [°C]
+#     RH = d['r']          # [%]
+#     P = d['isobaricInhPa']       # [hPa]
+
+#     # === Calcul de N ===
+#     es = 6.112 * np.exp((17.67 * T) / (T + 243.5))              # pression de vapeur saturante [hPa]
+#     e = RH / 100 * es                                           # pression de vapeur réelle
+#     N = (77.6 * P / (T + 273.15)) + (64.8 * e / (T + 273.15)) + (3.776e5 * e / (T + 273.15) ** 2)
+
+#     # === Gradient vertical ΔN/Δh ===
+#     H = d['z'] / 9.80665  # géopotentiel → géopotentiel height [m]
+#     dN = np.gradient(N, axis=0)
+#     dH = np.gradient(H, axis=0)
+#     dN_dH = dN / dH * 1000  # [N/km]
+
+#     # === Ducting mask ===
+#     ducting_mask = (dN_dH.min(axis=0) < R_DUCTING)
+
+#     # === Carte ===
+#     fig = plt.figure(figsize=(8, 6))
+#     ax = plt.axes(projection=ccrs.PlateCarree())
+#     ax.set_extent([LON_MIN, LON_MAX, LAT_MIN, LAT_MAX])
+#     ax.add_feature(cfeature.BORDERS, linewidth=0.5)
+#     ax.add_feature(cfeature.COASTLINE, linewidth=0.5)
+#     ax.add_feature(cfeature.LAND, facecolor='lightgray')
+#     ax.add_feature(cfeature.OCEAN, facecolor='lightblue')
+
+#     duct = ducting_mask.astype(int)
+#     lat = ds.latitude.values
+#     lon = ds.longitude.values
+#     Lon, Lat = np.meshgrid(ds.longitude, ds.latitude)
+
+#     cs = ax.pcolormesh(Lon, Lat, duct, cmap='Reds', shading='auto', alpha=0.6)
+#     ax.set_title(f"Ducting – {np.datetime_as_string(t, unit='h')} UTC")
+
+#     buf = BytesIO()
+#     plt.savefig(buf, format="png")
+#     buf.seek(0)
+#     frames.append(imageio.v2.imread(buf))
+#     plt.close(fig)
+
+# # === Sauvegarde GIF ===
+# imageio.mimsave("ducting_europe_july15.gif", frames, duration=0.6)
+# print(" GIF généré : ducting_europe_july15.gif")
+
+
 import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import imageio
-from datetime import datetime
 from io import BytesIO
 
 # === PARAMÈTRES ===
-ERA5_GRIB_FILE = "July15-AllHours/data.grib"  # ton fichier GRIB
-TARGET_DATE = "2025-07-15"
+ERA5_GRIB_FILE = "July-00-12H/data.grib"
 PRESSURE_LEVELS = [1000, 975, 950, 925, 900, 850]
-R_DUCTING = -157  # seuil de ducting (N/km)
+R_DUCTING = -157  # seuil en N/km
 
-# Domaine européen
+# Domaine de la carte (Europe)
 LAT_MIN, LAT_MAX = 30, 70
 LON_MIN, LON_MAX = -15, 40
 
-# === CHARGEMENT ===
+# === CHARGEMENT DES DONNÉES ===
 ds = xr.open_dataset(ERA5_GRIB_FILE, engine="cfgrib")
 ds = ds.sel(isobaricInhPa=PRESSURE_LEVELS)
-
-# Filtrage sur l'Europe
 ds = ds.sel(latitude=slice(LAT_MAX, LAT_MIN), longitude=slice(LON_MIN, LON_MAX))
 
-# Filtrage sur une seule journée
-all_times = ds.time.sel(time=ds.time.dt.date == np.datetime64(TARGET_DATE)).values
-
-print(f" {len(all_times)} timestamps trouvés pour {TARGET_DATE}")
+# === FILTRAGE DES TEMPS ===
+all_times = ds.time.values
+print(f"Nombre de timestamps disponibles : {len(all_times)}")
 
 # === PRÉPARATION GIF ===
 frames = []
 
 for t in all_times:
-    # Sous-ensemble temporel
     d = ds.sel(time=t)
 
-    T = d['t'] - 273.15  # [K] → [°C]
+    # Variables météo
+    T = d['t'] - 273.15  # [°C]
     RH = d['r']          # [%]
-    P = d['isobaricInhPa']       # [hPa]
+    P = d['isobaricInhPa']
 
-    # === Calcul de N ===
-    es = 6.112 * np.exp((17.67 * T) / (T + 243.5))              # pression de vapeur saturante [hPa]
-    e = RH / 100 * es                                           # pression de vapeur réelle
+    # Calcul pression de vapeur
+    es = 6.112 * np.exp((17.67 * T) / (T + 243.5))
+    e = RH / 100 * es
+
+    # Calcul de l'indice de réfraction N
     N = (77.6 * P / (T + 273.15)) + (64.8 * e / (T + 273.15)) + (3.776e5 * e / (T + 273.15) ** 2)
 
-    # === Gradient vertical ΔN/Δh ===
-    H = d['z'] / 9.80665  # géopotentiel → géopotentiel height [m]
+    # Hauteur géométrique [m]
+    H = d['z'] / 9.80665
+
+    # Gradient vertical ΔN / Δh
     dN = np.gradient(N, axis=0)
     dH = np.gradient(H, axis=0)
     dN_dH = dN / dH * 1000  # [N/km]
 
-    # === Ducting mask ===
+    # Masque ducting
     ducting_mask = (dN_dH.min(axis=0) < R_DUCTING)
 
-    # === Carte ===
+    # === PLOT ===
     fig = plt.figure(figsize=(8, 6))
     ax = plt.axes(projection=ccrs.PlateCarree())
     ax.set_extent([LON_MIN, LON_MAX, LAT_MIN, LAT_MAX])
@@ -222,19 +344,18 @@ for t in all_times:
     ax.add_feature(cfeature.OCEAN, facecolor='lightblue')
 
     duct = ducting_mask.astype(int)
-    lat = ds.latitude.values
-    lon = ds.longitude.values
     Lon, Lat = np.meshgrid(ds.longitude, ds.latitude)
-
     cs = ax.pcolormesh(Lon, Lat, duct, cmap='Reds', shading='auto', alpha=0.6)
-    ax.set_title(f"Ducting – {np.datetime_as_string(t, unit='h')} UTC")
+
+    timestamp = np.datetime_as_string(t, unit='h')
+    ax.set_title(f"Ducting – {timestamp} UTC")
 
     buf = BytesIO()
-    plt.savefig(buf, format="png")
+    plt.savefig(buf, format="png", bbox_inches='tight')
     buf.seek(0)
     frames.append(imageio.v2.imread(buf))
     plt.close(fig)
 
-# === Sauvegarde GIF ===
-imageio.mimsave("ducting_europe_july15.gif", frames, duration=0.6)
-print(" GIF généré : ducting_europe.gif")
+# === EXPORT GIF ===
+imageio.mimsave("ducting_europe_july.gif", frames, duration=0.6)
+print("✅ GIF généré : ducting_europe_july.gif")

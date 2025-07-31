@@ -3,7 +3,7 @@
 DOCKERHUB_USER="kellemensch"
 APP_NAME="lora-helium-map"
 # OLLAMA_NAME="ollama"
-TAG="latest"
+TAG="marconilab2"
 DOCKERFILE_APP="Dockerfile.dev"
 # DOCKERFILE_OLLAMA="Dockerfile.ollama"
 

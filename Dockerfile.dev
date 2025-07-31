@@ -1,4 +1,4 @@
-FROM lora-helium-map:base 
+FROM lora-helium-map:marconilab2  
 
 WORKDIR /app
 
