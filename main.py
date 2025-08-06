@@ -14,6 +14,7 @@ IGRA = "calculate_igra.py"
 DOWNLOAD_TERRAIN = "download_terrain.py"
 CONVERT_HGT = "convert_hgt_to_sdf.sh"
 STATS = "study-correlation/main_stats.py"
+ERA5 = "era5_gradients.py"
 
 # Définir l'argument --logs
 parser = argparse.ArgumentParser(description="Logs option")
@@ -26,6 +27,7 @@ with open("configs/.subdomain", "r") as f:
 
 def run_all():
     run_terrain()
+
     # if args.logs:
     #     p = subprocess.Popen(["bash", LOCALTUNNEL, subdomain, "--logs"])
     # else:
@@ -40,6 +42,7 @@ def run_all():
         subprocesses.append(p2)
 
     run_igra()
+    run_era5()
     run_map()
     
 def run_terrain():
@@ -71,6 +74,11 @@ def run_igra():
         p5 = subprocess.Popen(["python3", IGRA])
     subprocesses.append(p5)
     p5.wait()
+
+def run_era5():
+    print("Running ERA5...")
+    p6 = subprocess.Popen(["python3", "-u", ERA5])
+    subprocesses.append(p6)
 
 def run_stats():
     print("Running stats on correlation...")
@@ -114,6 +122,7 @@ try:
 
     # Lance les statistiques une fois par jour
     schedule.every(24).hours.do(run_stats)
+    schedule.every(24).hours.do(run_era5)
 
     while True:
         schedule.run_pending()

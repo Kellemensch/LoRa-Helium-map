@@ -150,16 +150,14 @@ def main():
     for file in glob.glob('End-node*.txt'):
         dest = os.path.join(RUNS_DIR, os.path.basename(file))
         if os.path.exists(dest):
-            os.replace(file, dest)  # Overwrites silently
-        else:
-            shutil.move(file, dest)
+            os.remove(dest)
+        shutil.move(file, dest)
 
     for file in glob.glob('*.png'):
         dest = os.path.join(IMG_DIR, os.path.basename(file))
         if os.path.exists(dest):
-            os.replace(file, dest)  # Overwrites silently
-        else:
-            shutil.move(file, dest)
+            os.remove(dest)
+        shutil.move(file, dest)
 
     return 0
 
