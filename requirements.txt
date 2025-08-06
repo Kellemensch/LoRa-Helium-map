@@ -10,3 +10,5 @@ numpy
 scipy
 scikit-learn
 seaborn
+cdsapi
+pygrib

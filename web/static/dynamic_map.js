@@ -137,7 +137,10 @@ function loadDateData(date) {
         // Ajouter les mesures
         gw.measurements.forEach(m => {
             const time = new Date(m.gwTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            infoHtml += `<b>- ${time} :</b> RSSI=${m.rssi || 'N/A'}, SNR=${m.snr !== null ? m.snr : 'N/A'}<br>`;
+            infoHtml += `<b>- ${time} :</b> RSSI=${m.rssi || 'N/A'}, SNR=${m.snr !== null ? m.snr : 'N/A'}
+                        <button class="measure-btn" onclick="fetchAndShowERA5Graph('${gw.name}', '${gw.lat.toFixed(5)}', '${gw.lon.toFixed(5)}', '${date}', '${time}')">
+                            See ERA5 graph
+                        </button><br>`;
         });
         
         // Ajouter le bouton IGRA si disponible
@@ -223,4 +226,58 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateDateControls();
         loadDateData(allDates[currentDateIndex]);
     });
+
+    // Nouvel écouteur pour le bouton ERA5
+    document.getElementById('era5Button').addEventListener('click', showERA5GraphForSelectedDate);
 });
+
+// Nouvelle fonction pour obtenir la date sélectionnée
+function getSelectedDate() {
+    return allDates[currentDateIndex];
+}
+
+// Fonction améliorée pour ouvrir le graphe ERA5
+async function showERA5GraphForSelectedDate() {
+    const selectedDate = getSelectedDate();
+    if (!selectedDate) {
+        alert("Please select a valid date first");
+        return;
+    }
+
+    try {
+        // Ouvrir directement l'image dans un nouvel onglet
+        window.open(`/api/era5_daily_graph?date=${selectedDate}`, '_blank');
+        
+    } catch (error) {
+        console.error("Error loading ERA5 graph:", error);
+        alert("Error loading ERA5 graph: " + error.message);
+    }
+}
+
+// Bouton ERA5 → appel API + ouverture fenêtre
+async function fetchAndShowERA5Graph(gatewayName, lat, lon, date, time) {
+    try {
+        const params = new URLSearchParams({
+            gateway_name: gatewayName,
+            lat: lat,
+            lon: lon,
+            date: date,
+            time: String(time)
+        });
+
+        const res = await fetch(`/api/era5_graph?${params.toString()}`);
+
+        if (!res.ok) throw new Error("Server error");
+
+        const data = await res.json(); // { image_url: "/plots/era5_xxx.png" }
+
+        if (data.image_url) {
+            window.open(data.image_url, '_blank', 'width=700,height=800');
+        } else {
+            alert("ERA5 graph not available yet.");
+        }
+    } catch (err) {
+        console.error("Error loading ERA5 graph:", err);
+        alert("Error loading ERA5 graph");
+    }
+}

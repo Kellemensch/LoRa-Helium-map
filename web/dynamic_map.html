@@ -65,6 +65,22 @@
             margin-top: 10px;
             font-size: 0.9rem;
         }
+
+        /* Bouton ERA5 */
+        .measure-btn {
+            display: inline-block;
+            background: #ff7f50;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            margin-top: 6px;
+            cursor: pointer;
+        }
+        .measure-btn:hover {
+            background: #e96a3a;
+        }
         
         /* Légende */
         #legend {
@@ -126,6 +142,34 @@
             border-radius: 5px;
             text-decoration: none;
         }
+
+        /* Bouton daily era5 */
+        .era5-btn {
+            display: inline-block;
+            background: #ff7f50;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .era5-btn:hover {
+            background: #e96a3a;
+        }
+
+        .era5-btn i {
+            margin-right: 5px;
+        }
+
+        /* Ajustement pour l'alignement des boutons */
+        #action-buttons {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
     </style>
 </head>
 <body>
@@ -162,11 +206,17 @@
         <div id="currentDate" style="font-weight: bold; margin-top: 5px;">Loading...</div>
     </div>
     
-    <!-- Stats Button -->
-    <div id="stats-button">
+    <!-- Boutons d'actions -->
+    <div id="action-buttons" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000; display: flex; gap: 10px;">
+        <!-- Bouton Stats existant -->
         <a href="/stats" target="_blank" class="stats-btn">
             <i class="fa fa-chart-bar"></i> View Statistics
         </a>
+        
+        <!-- Nouveau bouton ERA5 -->
+        <button id="era5Button" class="era5-btn">
+            <i class="fa fa-chart-line"></i> ERA5 Graph of this day
+        </button>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>

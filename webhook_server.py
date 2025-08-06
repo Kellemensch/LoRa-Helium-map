@@ -18,6 +18,7 @@ from functools import lru_cache
 import threading
 from collections import defaultdict
 import numpy as np
+import subprocess
 from configs.config_coords import END_DEVICE_LAT, END_DEVICE_LON
 
 # Désactive les logs de requêtes Werkzeug (Flask)
@@ -149,12 +150,18 @@ def helium_webhook():
                     rssi = gateway.get("rssi", "N/A")
                     snr = gateway.get("snr", "N/A")
 
+                    # Vérification : champs essentiels présents et valides
+                    if not all([gwTime, gatewayId, gateway_name, gateway_id, gateway_lat, gateway_long]):
+                        log("[IGNORED] Missing required data for gateway:", gatewayId or "Unknown")
+                        continue
+
                     # Converti latitudine e longitudine in float per il calcolo della distanza
                     try:
                         gateway_lat = float(gateway_lat)
                         gateway_long = float(gateway_long)
-                    except ValueError:
-                        gateway_lat, gateway_long = None, None
+                    except (ValueError, TypeError):
+                        log(f"[IGNORED] Invalid coordinates for gateway {gatewayId}")
+                        continue
 
                     # Calcola la distanza solo se tutti i valori sono validi
                     if gateway_lat is not None and gateway_long is not None:
@@ -329,6 +336,76 @@ def get_config():
 def serve_map_js():
     return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'dynamic_map.js')
 
+@app.route("/api/era5_graph")
+def get_graph():
+    gateway_name = request.args.get("gateway_name")
+    lat = request.args.get("lat", type=float)
+    lon = request.args.get("lon", type=float)
+    date = request.args.get("date")
+    time = request.args.get("time")
+
+    if None in [gateway_name, lat, lon, date, time]:
+        return jsonify({"error": "Missing parameters"}), 400
+
+
+    try:
+        # Lancer le script qui génère l'image
+        result = subprocess.run(
+            [
+                "python3", "era5_gradients.py",
+                "--on-demand", str(gateway_name), str(lat), str(lon), str(date), str(time)
+            ],
+            capture_output=True, text=True, check=True, timeout=300
+        )
+
+         # Nettoyer la sortie en prenant la dernière ligne
+        output_lines = result.stdout.strip().split('\n')
+        image_path = output_lines[-1]  # Prend seulement la dernière ligne (pas les print)
+
+        image_url = image_path.replace('/app/output/era5/plots/', '/plots/')
+        
+        return jsonify({"image_url": image_url})
+
+    except subprocess.TimeoutExpired:
+        return jsonify({"error": "Processing timeout"}), 504
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Script failed: {e.stderr}")
+        return jsonify({"error": f"Processing failed: {e.stderr}"}), 500
+    except Exception as e:
+        logging.error(f"Unexpected error: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route("/api/era5_daily_graph")
+def get_daily_graph():
+    date_str = request.args.get("date")
+    if not date_str:
+        return jsonify({"error": "Date parameter required"}), 400
+    
+    try:
+        # Valider et formater la date
+        date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+        formatted_date = date_obj.strftime("%Y-%m-%d")
+        
+        # Construire le nom de fichier attendu
+        filename = f"gradient_{formatted_date}.png"
+        image_path = os.path.join("/app/output/era5/plots", filename)
+        
+        # Vérifier que le fichier existe
+        if not os.path.exists(image_path):
+            return jsonify({"error": "ERA5 graph not available for this date"}), 404
+            
+        # Renvoyer directement l'image
+        return send_from_directory(
+            directory="/app/output/era5/plots",
+            path=filename,
+            mimetype="image/png"
+        )
+        
+    except ValueError:
+        return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 
 @app.route('/map', methods=['GET'])
@@ -341,6 +418,10 @@ def map_server():
 @app.route('/app/output/igra-datas/derived/<path:filename>')
 def serve_images(filename):
     return send_from_directory('/app/output/igra-datas/derived', filename)
+
+@app.route('/plots/<path:filename>')
+def serve_era5(filename):
+    return send_from_directory('/app/output/era5/plots', filename)
 
 @app.route('/logs', methods=['GET'])
 def get_logs():
