@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.offsetbox import AnchoredText
 from datetime import datetime
 import pandas as pd
+from math import radians, cos, sin, sqrt, atan2, degrees
 from configs.config_coords import END_DEVICE_LAT, END_DEVICE_LON
 
 # ==== CONFIG ====
@@ -23,6 +24,9 @@ ERA5_PRESSURE_LEVELS = [1000, 950, 900, 850, 800, 750, 700]  # en hPa
 ERA5_VARIABLES = ['geopotential', 'temperature', 'relative_humidity']
 
 CDSAPI_RC_PATH = os.path.expanduser("~/.cdsapirc")
+
+EARTH_RADIUS = 6371.0
+
 
 # ==== SETUP ====
 
@@ -59,6 +63,26 @@ for file_path in glob.glob(os.path.join(PLOT_DIR, "*ondemand*.png")):
     except OSError as e:
         print(f"Error deleting {file_path} : {e}")
 
+
+
+
+def spherical_midpoint(lat1, lon1):
+    # Convert to radians
+    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, END_DEVICE_LAT, END_DEVICE_LON])
+
+    dlon = lon2 - lon1
+
+    Bx = cos(lat2) * cos(dlon)
+    By = cos(lat2) * sin(dlon)
+
+    lat3 = atan2(
+        sin(lat1) + sin(lat2),
+        sqrt((cos(lat1) + Bx)**2 + By**2)
+    )
+    lon3 = lon1 + atan2(By, cos(lat1) + Bx)
+
+    # Convert back to degrees
+    return degrees(lat3), degrees(lon3)
 
 def download_era5_for_day(day_str):
     """Télécharge ERA5 pour un jour donné si non déjà présent."""
@@ -220,7 +244,7 @@ def process_day(grib_file, day_str):
         return None
 
 def on_demand(gateway_name, lat, lon, date_str, time_str):
-    """Génère un graphique on-demand pour une position spécifique."""
+    """Génère un graphique on-demand double (gateway + midpoint)."""
     try:
         grib_file = os.path.join(GRIB_DIR, f'era5_{date_str}.grib')
         if not os.path.exists(grib_file):
@@ -236,52 +260,66 @@ def on_demand(gateway_name, lat, lon, date_str, time_str):
         # Filtrer
         temp_msgs = grbs.select(shortName='t', dataTime=closest_time)
         rh_msgs = grbs.select(shortName='r', dataTime=closest_time)
-        
-        # Trouver le point de grille le plus proche
         lats, lons = temp_msgs[0].latlons()
-        dist = (lats - lat)**2 + (lons - lon)**2
-        i, j = np.unravel_index(dist.argmin(), dist.shape)
-        
-        # Extraire les profils verticaux
-        temp_profile = []
-        rh_profile = []
-        
-        for level in sorted(ERA5_PRESSURE_LEVELS, reverse=True):
-            t_msg = next((m for m in temp_msgs if m['level'] == level), None)
-            rh_msg = next((m for m in rh_msgs if m['level'] == level), None)
-            
-            if t_msg and rh_msg:
-                temp_profile.append(t_msg.values[i,j])
-                rh_profile.append(rh_msg.values[i,j])
-        
-        if len(temp_profile) != len(ERA5_PRESSURE_LEVELS):
-            raise ValueError("Missing data for some pressure levels")
-        
-        # Calculer les gradients
-        heights, gradients = compute_gradient_profile(
-            np.array(temp_profile),
-            np.array(rh_profile),
-            ERA5_PRESSURE_LEVELS
+
+        def extract_profile(lat_, lon_):
+            """Sous-fonction pour extraire un profil pour une coordonnée."""
+            dist = (lats - lat_)**2 + (lons - lon_)**2
+            i, j = np.unravel_index(dist.argmin(), dist.shape)
+            temp_profile, rh_profile = [], []
+            for level in sorted(ERA5_PRESSURE_LEVELS, reverse=True):
+                t_msg = next((m for m in temp_msgs if m['level'] == level), None)
+                rh_msg = next((m for m in rh_msgs if m['level'] == level), None)
+                if t_msg and rh_msg:
+                    temp_profile.append(t_msg.values[i, j])
+                    rh_profile.append(rh_msg.values[i, j])
+            if len(temp_profile) != len(ERA5_PRESSURE_LEVELS):
+                raise ValueError(f"Missing data for some pressure levels at {lat_:.2f},{lon_:.2f}")
+            return np.array(temp_profile), np.array(rh_profile)
+
+        # --- Gateway ---
+        temp_gw, rh_gw = extract_profile(lat, lon)
+        heights_gw, gradients_gw = compute_gradient_profile(temp_gw, rh_gw, ERA5_PRESSURE_LEVELS)
+
+        # --- Point milieu sphérique ---
+        lat_mid, lon_mid = spherical_midpoint(lat, lon)
+        temp_mid, rh_mid = extract_profile(lat_mid, lon_mid)
+        heights_mid, gradients_mid = compute_gradient_profile(temp_mid, rh_mid, ERA5_PRESSURE_LEVELS)
+
+        # --- Affichage ---
+        fig, axs = plt.subplots(1, 2, figsize=(12, 6), sharey=True)
+
+        axs[0].plot(gradients_gw, heights_gw, color='blue', label=f'Gateway ({lat:.2f}, {lon:.2f})')
+        axs[0].axvline(x=-157, color='red', linestyle='--', label='Ducting threshold -157 N/km')
+        axs[0].set_title('Refractivity gradient on gateway point')
+        axs[0].set_xlabel('Refractivity gradient (N/km)')
+        axs[0].set_ylabel('Height (m)')
+        axs[0].invert_yaxis()
+        axs[0].grid(True)
+        axs[0].legend()
+
+        axs[1].plot(gradients_mid, heights_mid, color='green', label=f'Midpoint ({lat_mid:.2f}, {lon_mid:.2f})')
+        axs[1].axvline(x=-157, color='red', linestyle='--', label='Ducting threshold -157 N/km')
+        axs[1].set_title('Refractivity gradient on spherical midpoint with end-node')
+        axs[1].set_xlabel('Refractivity gradient (N/km)')
+        axs[1].invert_yaxis()
+        axs[1].grid(True)
+        axs[1].legend()
+
+        fig.suptitle(f'ERA5 refractivity gradient - {gateway_name}\n{date_str} at {closest_hour}:00H', fontsize=14)
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+        plot_file = os.path.join(
+            PLOT_DIR,
+            f'ondemand_{gateway_name}_{date_str}_{lat:.2f}_{lon:.2f}_vs_midpoint.png'
         )
-        
-        # Créer le graphique
-        plt.figure(figsize=(8, 6))
-        plt.plot(gradients, heights, label=f"{lat:.2f}, {lon:.2f}")
-        plt.axvline(x=-157, color='red', linestyle='--', label='Ducting threshold -157 N/km')
-        plt.xlabel('Refractivity gradient (N/km)')
-        plt.ylabel('Height (m)')
-        plt.title(f'ERA5 Refractivity gradient - {gateway_name}\n{date_str} at {closest_time}:00H')
-        plt.legend()
-        
-        plot_file = os.path.join(PLOT_DIR, 
-                               f'ondemand_{gateway_name}_{date_str}_{lat:.2f}_{lon:.2f}.png')
         plt.savefig(plot_file, dpi=150, bbox_inches='tight')
         plt.close()
         grbs.close()
-        
+
         print(f"[OK] Saved on-demand graph: {plot_file}")
         return plot_file
-        
+
     except Exception as e:
         print(f"[ERROR] On-demand processing failed: {str(e)}")
         if 'grbs' in locals():
