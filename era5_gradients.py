@@ -5,6 +5,7 @@ import pygrib
 import cdsapi
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.offsetbox import AnchoredText
 from datetime import datetime
 import pandas as pd
 from configs.config_coords import END_DEVICE_LAT, END_DEVICE_LON
@@ -50,6 +51,13 @@ key: {cds_key}"""
 # Appel de la fonction de configuration avant tout
 setup_cdsapi_config()
 
+# Supprimer les anciens graphes créés pour libérer de la place
+for file_path in glob.glob(os.path.join(PLOT_DIR, "*ondemand*.png")):
+    try:
+        os.remove(file_path)
+        print(f"Deleted : {file_path}")
+    except OSError as e:
+        print(f"Error deleting {file_path} : {e}")
 
 
 def download_era5_for_day(day_str):
@@ -120,7 +128,7 @@ def compute_gradient_profile(temp, rh, pressure_levels):
     
     # Hauteurs et gradients
     heights = compute_real_heights(temp, rh, pressure_levels)
-    gradients = np.gradient(N, heights)
+    gradients = np.gradient(N, heights) * 1000 # Pour avoir du N/km et non N/m
     
     return heights, gradients
 
@@ -144,7 +152,11 @@ def process_day(grib_file, day_str):
         lats, lons = messages[0].latlons()
         
         # Créer le graphique
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(12, 6))
+
+        has_ducting = False
+        has_noducting = False
+        ducting_coords = []
         
         # Pour chaque point de grille
         for i in range(0, lats.shape[0], 2):  # Pas de 2 pour réduire le nombre
@@ -164,13 +176,34 @@ def process_day(grib_file, day_str):
                         np.array(rh_profile),
                         ERA5_PRESSURE_LEVELS
                     )
-                    plt.plot(gradients, heights, alpha=0.5, linewidth=0.5)
+
+                    if np.any(gradients < -157):
+                        plt.plot(gradients, heights, color='red', alpha=0.7, linewidth=0.7,
+                                 label='Ducting' if not has_ducting else "")
+                        has_ducting = True
+                        lat = round(float(lats[i, j]), 2)
+                        lon = round(float(lons[i, j]), 2)
+                        ducting_coords.append(f"{lat}, {lon}")
+                    else:
+                        plt.plot(gradients, heights, color='gray', alpha=0.3, linewidth=0.7,
+                                 label='No Ducting' if not has_noducting else "")
+                        has_noducting = True
         
-        plt.axvline(x=-157, color='red', linestyle='--', label='Ducting threshold')
+        plt.axvline(x=-157, color='red', linestyle='--', label='Ducting threshold -157 N/km')
         plt.xlabel('Refractivity gradient (N/km)')
         plt.ylabel('Height (m)')
-        plt.title(f'Refractivity gradients - {day_str}')
+        plt.title(f"Refractivity gradients of all coordinates for each hour of the day {day_str}")
         plt.legend()
+        plt.grid(True)
+        
+        # Encadré des profils ducting
+        if ducting_coords:
+            coord_text = "\n".join(ducting_coords[:10])  # max 10 pour lisibilité
+            if len(ducting_coords) > 10:
+                coord_text += f"\n... (+{len(ducting_coords) - 10} more)"
+            anchored_text = AnchoredText(f"Profiles with ducting at:\n{coord_text}",
+                                         loc='upper right', prop={'size': 8}, frameon=True)
+            plt.gca().add_artist(anchored_text)
         
         plot_file = os.path.join(PLOT_DIR, f'gradient_{day_str}.png')
         plt.savefig(plot_file, dpi=150, bbox_inches='tight')
@@ -234,10 +267,10 @@ def on_demand(gateway_name, lat, lon, date_str, time_str):
         # Créer le graphique
         plt.figure(figsize=(8, 6))
         plt.plot(gradients, heights, label=f"{lat:.2f}, {lon:.2f}")
-        plt.axvline(x=-157, color='red', linestyle='--', label='Ducting threshold')
+        plt.axvline(x=-157, color='red', linestyle='--', label='Ducting threshold -157 N/km')
         plt.xlabel('Refractivity gradient (N/km)')
         plt.ylabel('Height (m)')
-        plt.title(f'ERA5 Gradient - {gateway_name}\n{date_str} {closest_time:02d}:00')
+        plt.title(f'ERA5 Refractivity gradient - {gateway_name}\n{date_str} at {closest_time}:00H')
         plt.legend()
         
         plot_file = os.path.join(PLOT_DIR, 
