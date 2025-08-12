@@ -3,7 +3,7 @@
 # Creazione di un file csv con i dati
 # Versione che calcola la distanza del nodo dal gateway e lo inserisce nel csv
 
-# Author : Marco Rainone
+# From the base code of : Marco Rainone
 
 import csv
 import os
@@ -332,9 +332,6 @@ def get_config():
         "zoom_level": 12
     })
 
-@app.route('/dynamic_map.js')
-def serve_map_js():
-    return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'dynamic_map.js')
 
 @app.route("/api/era5_graph")
 def get_graph():

@@ -158,6 +158,9 @@ def compute_gradient_profile(temp, rh, pressure_levels):
 
 def process_day(grib_file, day_str):
     """Produit le graphe global pour un jour."""
+    path = os.path.join(PLOT_DIR, f'gradient_{day_str}.png')
+    if os.path.exists(path):
+        return path
     try:
         grbs = pygrib.open(grib_file)
         

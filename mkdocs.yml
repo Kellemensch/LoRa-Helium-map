@@ -1,0 +1,52 @@
+site_name: LoRa-Helium-Map
+
+repo_url: https://github.com/Kellemensch/LoRa-Helium-map
+repo_name: LoRa-Helium-map
+
+nav:
+  - Home: index.md
+  - Docker version:
+    - Setup guide: README_docker.md
+    - Documentation: docker_documentation.md
+    - MarconiLab version: marconilab.md
+  - Python version (old):
+    - Setup guide: setup_python.md
+    - Documentation: python_documentation.md
+  - About: 
+    - License: license.md
+    - Release Notes: release_notes.md
+    - Author: author.md
+
+theme:
+  name: material
+  highlightjs: true
+  palette:
+    # Palette toggle for automatic mode
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default 
+
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
