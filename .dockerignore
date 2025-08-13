@@ -8,12 +8,20 @@ examples/
 igra-datas/
 splat-runs/
 maps/
+marconilab/
+docs/
 
 *.md
 *.csv
 *.json
 .gitignore
 docker-push.sh
+ducting*
+ollama*
+weather_cache.json
+*.sqlite
+*.gif
+mkdocs.yml
 
 configs/.latitude
 configs/.longitude
@@ -21,6 +29,6 @@ configs/.subdomain
 configs/__pycache__/
 unzipped_hgt_files/
 srtm_hgt_files/
+site/
 
 .vscode/
-.idea/

@@ -1,0 +1,16 @@
+.venv/
+venv/
+.vscode/
+data/
+maps/
+Galileo*.txt
+End-node*.txt
+*.csv
+igra-datas/
+splat-runs/
+configs/.*
+deploy/
+*.grib*
+.cache*
+*.json
+site/
