@@ -2,11 +2,13 @@
 
 ## Docker version
 
-Get the release [here](https://github.com/Kellemensch/LoRa-Helium-map/releases/tag/v3.0.0).
+Get the release [here](https://github.com/Kellemensch/LoRa-Helium-map/releases/tag/v3.0.0).  
+[See Documentation](README_docker.md)
 
 ## Python portable version
 
-Get the release [here](https://github.com/Kellemensch/LoRa-Helium-map/releases/tag/v2.0.0).
+Get the release [here](https://github.com/Kellemensch/LoRa-Helium-map/releases/tag/v2.0.0).  
+[See Documentation](setup_python.md)
 
 ## DockerHub repository
 

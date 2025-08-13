@@ -2,6 +2,8 @@
 
 The Docker repository can be found in DockerHub [here](https://hub.docker.com/repository/docker/kellemensch/lora-helium-map/general).
 
+For setup and installation, see [this section](README_docker.md)
+
 --- 
 
 ## Containers used 

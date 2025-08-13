@@ -116,3 +116,7 @@ A container named `watchtower` is used to pull updates of this application from 
 
 If the tunnel is unavailable, don't panic, it will be relaunched automatically by the application. It is probably due to localtunnel's servers, it might take some time.  
 If the problem still persists, be sure that your connection to internet is authorized.
+
+## Documentation
+
+You can find all the documentation for the files in the [dedicated section](docker_documentation.md).
