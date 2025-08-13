@@ -2,12 +2,16 @@
 
 The Docker repository can be found in DockerHub [here](https://hub.docker.com/repository/docker/kellemensch/lora-helium-map/general).
 
+--- 
+
 ## Containers used 
 
 This project uses a total of 2 containers:
 
 * The application `app` : from main repository `kellemensch/lora-helium-map:latest`
 * A Watchtower to automate updates: from `containrrr/watchtower` - [See GitHub repo](https://github.com/containrrr/watchtower)
+
+---
 
 ## Available files
 
@@ -57,6 +61,8 @@ The coordinates are written into `configs/.latitude` and `configs/.longitude`, a
 Then it sets two environment variables `LOCAL_UID` and `LOCAL_GID` so that Docker can retrieve them from the docker-compose.
 
 Finally, it launches the pull from DockerHub and starts the containers.
+
+---
 
 ## Files in Docker application image
 
@@ -200,4 +206,98 @@ Links that are noted `LOS` (in Line-Of-Sight) are skipped here as their graph ar
 ### era5_gradients.py
 
 This script is the latest to have been created.  
-It computes refractivity gradients in addition of IGRA data. It was thought to add more precise data in term of localisation and time as there are not so many IGRA stations.
+It computes refractivity gradients in addition of IGRA data. It was thought to add more precise data in term of localisation and time as there are not so many IGRA stations around Europe.
+
+The dataset used for this project is the [ERA5 hourly data on pressure levels from 1940 to present](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-pressure-levels?tab=download). (see [Documentation of ERA5](https://confluence.ecmwf.int/display/CKB/ERA5:+data+documentation))  
+Note: Daily updates for ERA5T are available about 5 days behind real time.
+
+An API is available with this ERA5 dataset and it is used in python with the module `cdsapi` (see [Documentation of API](https://cds.climate.copernicus.eu/how-to-api)).
+
+The basic utility of this script is to create a refractivity graph for each day with all available data. This means that it draws a gradient curve for each coordinate at each hour.  
+Gradients that exceed the ducting threshold are displayed in red and annotated next to them.
+
+Here is an example of a daily gradient:
+
+<figure markdown="span">
+  ![Daily ERA5 refractivity graph](./img/gradient_2025-06-26.png){ width="100%" }
+  <figcaption>Daily ERA5 refractivity graph</figcaption>
+</figure>
+
+Downloaded data are in [GRIdded Binary (GRIB)](https://en.wikipedia.org/wiki/GRIB) format and downloaded individually for each day via the API.  
+Data are for these pressure heights (in hPa): 1000, 950, 900, 850, 800, 750, 700; and for every two hours.  
+In order to use the API, a config file `~/.cdsapirc` must be created and filled with these information (automated by the file):
+
+```python
+cds_url = "https://cds.climate.copernicus.eu/api"  
+cds_key = "799f5ea7..."
+```
+For this project, my personal cds_key is used.
+
+Another feature of this script is available: the _on demand_ graph. This is called by the map's JavaScript by clicking on the button.  
+
+<figure markdown="span">
+  ![ERA5 button](./img/era5_button.png){ width="90%" }
+  <figcaption>ERA5 on demand button</figcaption>
+</figure>
+
+This feature render two refractivity graphs by reading the corresponding GRIB file of the day and parsing it to find the requested hour (or the closest one).  
+Rendered graphs are for the actual coordinates of the gateway and for the spherical midpoint between this gateway and the end-node, to remain consistent with IGRA's approach.  
+
+
+<figure markdown="span">
+  ![On demand ERA5 graph](./img/ondemand_lone-linen-hedgehog_2025-07-11_44.26_11.94_vs_midpoint.png){ width="100%" }
+  <figcaption>On demand ERA5 graph</figcaption>
+</figure>
+
+Note: Daily graphs are computed locally before exposing the map online, whereas _on demand_ graphs are computed at the time of the call and will be stored locally until the next scheduled launch.
+
+### run_splat.py
+
+This script is used to make Splat! calls and create utility files for it to properly run.
+
+In the dataset of the links, every link is initially attributed `N/A` to the column `visibility`. This script is used to fill this column by either _LOS_ (in Line-Of-Sight) or _NLOS_ (not in Line-Of-Sight) depending on wheter the Line-Of-Sight is blocked by the Earth curvature or any object (mountains etc).
+
+For each gateway, it creates a _Site Location_ (QTH) file containing the site's name, latitude, longitude and height above ground level, each separated by a single line-feed character.  
+__Caution:__ I have found that Splat! needs the longitudes to be written like this : __lon = 360 - lon__
+
+Here is an example of a QTH file named `abundant-mustard-snake.qth`:
+
+```
+abundant-mustard-snake
+44.1856944607886
+347.75593422313324
+3m
+```
+
+Then, it runs Splat! in terrain profile mode with point-to-point analysis to perform line-of-sight terrain analysis between the end-node and the gateway's location. (see [Documentation](https://www.qsl.net/kd2bd/splat.pdf))  
+The command is `splat -t tx_site.qth -r rx_site.qth` with tx_site being the end-node so `end_node.qth` and rx_site being the gateway.
+
+Finally, it parses the analysis report text file by checking if the line "detected obstructions at" is present in it.
+
+Here are some examples of terrain analysis graphs returned by Splat:
+
+<figure markdown="span">
+  ![In line of sight gateway](./img/lucky-carob-donkey.png){ width="80%"}
+  <figcaption>In line of sight gateway (not blocked by environment)</figcaption>
+</figure>
+<figure markdown="span">
+  ![Not in line of sight gateway](./img/fresh-khaki-lion.png){ width="80%"}
+  <figcaption>Not in line of sight gateway (blocked by environment)</figcaption>
+</figure>
+<figure markdown="span">
+  ![Not in line of sight gateway](./img/abundant-mustard-snake.png){ width="80%"}
+  <figcaption>Not in line of sight gateway (blocked by Earth's curvature)</figcaption>
+</figure>
+
+### generate_maps.py
+
+This script is deprecated. It was first used to create the static map.html containing all necessary data to show the map.
+
+### main_stats.py
+
+This script groups and manages all other scripts to calculate statistics in the `study-correlation/` folder: 
+
+* igra_ducts.py: for each day, detects all ducts with their minimal gradient, base height, top height and thickness and put it in `igra_ducts.csv`
+* daily_stats.py: for each day, calculates the total number of links, NLOS links, calculates NLOS ratio, average distance, maximum distance and number of different gateways and put it in `daily_propagation_stats.csv`
+* merge_data.py: just merge the two above dataset into one `merged_data.csv`
+* correlation.py: compute different type of correlation and plot results in `/app/web/static/stats/`. All these graphs are available at the `/stats` endpoint. Correlations are: Temporal analysis, Pearson correlation, Spearman correlation, linear regressions and correlation matrix.

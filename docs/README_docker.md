@@ -54,7 +54,7 @@ AT+DR=EU868 \\ OR 915 for USA
 AT+JOIN
 ```
 8.  Upon succes, you should see :
-```
+```bash
 +JOIN: Network joined successfully
 ```
 
