@@ -273,6 +273,19 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="." class="md-nav__link md-nav__link--active">
         
   
@@ -284,6 +297,43 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#project-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Project overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#latest-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      Latest release
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -380,7 +430,7 @@
   
   
     <li class="md-nav__item">
-      <a href="marconilab.md" class="md-nav__link">
+      <a href="marconilab/" class="md-nav__link">
         
   
   
@@ -448,7 +498,7 @@
   
   
     <li class="md-nav__item">
-      <a href="setup_python.md" class="md-nav__link">
+      <a href="setup_python/" class="md-nav__link">
         
   
   
@@ -471,7 +521,7 @@
   
   
     <li class="md-nav__item">
-      <a href="python_documentation.md" class="md-nav__link">
+      <a href="python_documentation/" class="md-nav__link">
         
   
   
@@ -539,7 +589,7 @@
   
   
     <li class="md-nav__item">
-      <a href="license.md" class="md-nav__link">
+      <a href="license/" class="md-nav__link">
         
   
   
@@ -562,7 +612,7 @@
   
   
     <li class="md-nav__item">
-      <a href="release_notes.md" class="md-nav__link">
+      <a href="release_notes/" class="md-nav__link">
         
   
   
@@ -585,7 +635,7 @@
   
   
     <li class="md-nav__item">
-      <a href="author.md" class="md-nav__link">
+      <a href="author/" class="md-nav__link">
         
   
   
@@ -628,6 +678,32 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#project-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Project overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#latest-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      Latest release
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -647,6 +723,21 @@
 
 <h1 id="lora-helium-map-documentation">Lora-Helium-Map Documentation</h1>
 <p>For full project detail visit the <a href="https://github.com/Kellemensch/LoRa-Helium-map">GitHub page</a>.</p>
+<h2 id="project-overview">Project overview</h2>
+<p>LoRa-Helium-Map is a Python toolkit to retrieve real-time data from a LoRaWAN end-node connected to the Helium Network, process radiosonde observations (IGRA v2 or ERA5), compute atmospheric refractivity gradients, visualize potential tropospheric ducts, and make statistics.</p>
+<p>This project is a continuation of the previous project done by <a href="https://www.ictp.it">Abdus Salam International Centre for Theoretical Physics</a> (ICTP) researchers Pr. Marco Zennaro, Pr. Ermanno Pietrosemoli and Pr. Marco Rainone.<br />
+See their paper <a href="https://arxiv.org/pdf/2004.02802">here</a>.</p>
+<p>It was also based on their project <em>TAT.py: Tropospheric Analysis Tools in Python</em>.
+See their paper <a href="https://ieeexplore.ieee.org/document/9606437">here</a>.</p>
+<p>This project is built on the <a href="https://www.helium.com/">Helium Network</a>, a global decentralized LoRaWAN infrastructure. After initial testing with <a href="https://www.thethingsnetwork.org/">The Things Network</a> (TTN), Helium was chosen due to its significantly larger community and higher density of gateways, which improves the chances of capturing and analyzing signals over long distances.<br />
+This broader coverage is particularly important to our research focus: studying abnormal radio wave propagation in the troposphere, a phenomenon that can extend communication ranges far beyond normal line-of-sight limits.</p>
+<p>The motivation behind this work is to better understand how environmental conditions in the lower atmosphere influence long-range wireless communications.<br />
+While LoRaWAN networks are typically designed for predictable line-of-sight coverage, rare tropospheric phenomena—such as ducting—can create unexpected, extended communication links.<br />
+By systematically collecting and correlating real-world network data with atmospheric measurements, this project aims to identify, quantify, and visualize these events.<br />
+The resulting insights could help refine radio propagation models, assist network planners in optimizing infrastructure, and contribute to the broader scientific study of atmospheric effects on wireless technologies.</p>
+<hr />
+<h2 id="latest-release">Latest release</h2>
+<p>You can find the documentation of the latest release for this project <a href="docker_documentation/">here</a>.</p>
 
 
 
@@ -674,6 +765,10 @@
   <div class="md-footer-meta md-typeset">
     <div class="md-footer-meta__inner md-grid">
       <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2025 Baptiste Demoisy
+    </div>
   
   
     Made with

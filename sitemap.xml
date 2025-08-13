@@ -2,14 +2,38 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://Kellemensch.github.io/LoRa-Helium-map/</loc>
-         <lastmod>2025-08-12</lastmod>
+         <lastmod>2025-08-13</lastmod>
     </url>
     <url>
          <loc>https://Kellemensch.github.io/LoRa-Helium-map/README_docker/</loc>
-         <lastmod>2025-08-12</lastmod>
+         <lastmod>2025-08-13</lastmod>
+    </url>
+    <url>
+         <loc>https://Kellemensch.github.io/LoRa-Helium-map/author/</loc>
+         <lastmod>2025-08-13</lastmod>
     </url>
     <url>
          <loc>https://Kellemensch.github.io/LoRa-Helium-map/docker_documentation/</loc>
-         <lastmod>2025-08-12</lastmod>
+         <lastmod>2025-08-13</lastmod>
+    </url>
+    <url>
+         <loc>https://Kellemensch.github.io/LoRa-Helium-map/license/</loc>
+         <lastmod>2025-08-13</lastmod>
+    </url>
+    <url>
+         <loc>https://Kellemensch.github.io/LoRa-Helium-map/marconilab/</loc>
+         <lastmod>2025-08-13</lastmod>
+    </url>
+    <url>
+         <loc>https://Kellemensch.github.io/LoRa-Helium-map/python_documentation/</loc>
+         <lastmod>2025-08-13</lastmod>
+    </url>
+    <url>
+         <loc>https://Kellemensch.github.io/LoRa-Helium-map/release_notes/</loc>
+         <lastmod>2025-08-13</lastmod>
+    </url>
+    <url>
+         <loc>https://Kellemensch.github.io/LoRa-Helium-map/setup_python/</loc>
+         <lastmod>2025-08-13</lastmod>
     </url>
 </urlset>
