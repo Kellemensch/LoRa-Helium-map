@@ -39,21 +39,21 @@ app = Flask(__name__, template_folder='web', static_folder='web/static', static_
 STATS_FOLDER = os.path.join(app.static_folder, 'stats')
 
 # File di log per i messaggi originali
-LOG_FILE = "/app/output/data/helium_data_msg.txt"
+LOG_FILE = "output/data/helium_data_msg.txt"
 
 # Nome del file CSV
-CSV_FILE = "/app/output/data/helium_gateway_data.csv"
+CSV_FILE = "output/data/helium_gateway_data.csv"
 
 # Definizione dell'header del CSV
 CSV_HEADER = ["gwTime", "gatewayId", "gateway_name", "gateway_id", 
               "node_long", "node_lat", "gateway_long", "gateway_lat", 
               "dist_km", "rssi", "snr", "visibility"]
 
-IGRA_LINKS_JSON = "/app/output/igra-datas/map_links.json"
+IGRA_LINKS_JSON = "output/igra-datas/map_links.json"
 
-JSON_INDEX = "/app/output/data/gateways_index.json.gz"
+JSON_INDEX = "output/data/gateways_index.json.gz"
 
-LOG_FILE = "/app/output/app.log"
+LOG_FILE = "output/app.log"
 
 csv_lock = threading.Lock()
 index_lock = threading.Lock()
@@ -443,5 +443,3 @@ if __name__ == '__main__':
             create_index()
         except Exception as e:
             log(f"Initial index creation failed: {e}")
-
-    app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)

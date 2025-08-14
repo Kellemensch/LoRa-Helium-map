@@ -10,6 +10,7 @@ splat-runs/
 maps/
 marconilab/
 docs/
+site/
 
 *.md
 *.csv
@@ -22,6 +23,9 @@ weather_cache.json
 *.sqlite
 *.gif
 mkdocs.yml
+webhook_server.py
+Dockerfile*
+*.wsgi
 
 configs/.latitude
 configs/.longitude

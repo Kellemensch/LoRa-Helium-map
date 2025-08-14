@@ -6,8 +6,6 @@ import sys
 import argparse
 import os
 
-LOCALTUNNEL = "run_localtunnel.sh"
-WEBHOOK = "webhook_server.py"
 SPLAT = "run_splat.py"
 MAP_GENERATION = "generate_maps.py"
 IGRA = "calculate_igra.py"
@@ -28,19 +26,6 @@ with open("configs/.subdomain", "r") as f:
 def run_all():
     run_terrain()
 
-    # if args.logs:
-    #     p = subprocess.Popen(["bash", LOCALTUNNEL, subdomain, "--logs"])
-    # else:
-    #     p = subprocess.Popen(["bash", LOCALTUNNEL, subdomain])
-    # subprocesses.append(p)
-    time.sleep(2)
-    with open("/app/output/server.log", "w") as log_file:
-        if args.logs:
-            p2 = subprocess.Popen(["python3", WEBHOOK, "--logs"], stdout=log_file)
-        else:
-            p2 = subprocess.Popen(["python3", WEBHOOK], stdout=log_file)
-        subprocesses.append(p2)
-
     run_igra()
     run_era5()
     run_map()
@@ -54,7 +39,6 @@ def run_terrain():
     p00.wait()
 
 def run_map():
-    print("(Re)running SPLAT calculation and map generation on new data...")
     if args.logs:
         p3 = subprocess.Popen(["python3", SPLAT, "--logs"])
     else:
@@ -67,7 +51,6 @@ def run_map():
     subprocesses.append(p4)
 
 def run_igra():
-    print("Running calculate_igra on data...")
     if args.logs:
         p5 = subprocess.Popen(["python3", IGRA, "--logs"])
     else:
@@ -76,17 +59,14 @@ def run_igra():
     p5.wait()
 
 def run_era5():
-    print("Running ERA5...")
     p6 = subprocess.Popen(["python3", "-u", ERA5])
     subprocesses.append(p6)
 
 def run_stats():
-    print("Running stats on correlation...")
     p6 = subprocess.Popen(["python3", STATS])
     subprocesses.append(p6)
 
 def cleanup(signum=None, frame=None):
-    print("Stopping all subprocesses...")
     for p in subprocesses:
         if p.poll() is None:  # Si le process est encore actif
             try:

@@ -5,10 +5,8 @@ services:
       args:
         USER_ID: ${LOCAL_UID}
         GROUP_ID: ${LOCAL_GID}
-    image: kellemensch/lora-helium-map:marconilab_era5
+    image: kellemensch/lora-helium-map:marconilab
     container_name: lora-map
-    ports:
-      - "5000:5000"
     volumes:
       - ./output:/app/output
       - ./configs:/app/configs
@@ -25,17 +23,3 @@ services:
       - WATCHTOWER_CLEANUP=true
       - WATCHTOWER_POLL_INTERVAL=60  # toutes les 1 minute
     restart: unless-stopped
-
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    container_name: cloudflared
-    command: tunnel run marconilab
-    volumes:
-      - cloudflared_data:/etc/cloudflared
-    depends_on:
-      - app
-    restart: unless-stopped
-
-volumes:
-  cloudflared_data:
-    external: true

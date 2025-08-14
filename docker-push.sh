@@ -21,14 +21,8 @@ VERSION_TAG=$1
 echo "Building image: $DOCKERHUB_USER/$APP_NAME:$VERSION_TAG"
 docker build --no-cache -f $DOCKERFILE_APP -t $DOCKERHUB_USER/$APP_NAME:$VERSION_TAG .
 
-echo "Tagging image as latest"
-docker tag $DOCKERHUB_USER/$APP_NAME:$VERSION_TAG $DOCKERHUB_USER/$APP_NAME:latest
-
 # === PUSH ===
 echo "Pushing versioned image: $DOCKERHUB_USER/$APP_NAME:$VERSION_TAG"
 docker push $DOCKERHUB_USER/$APP_NAME:$VERSION_TAG
 
-echo "Pushing latest tag: $DOCKERHUB_USER/$APP_NAME:latest"
-docker push $DOCKERHUB_USER/$APP_NAME:latest
-
-echo "✅ All images pushed successfully!"
+echo "All images pushed successfully!"
